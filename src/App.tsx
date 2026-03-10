@@ -37,7 +37,8 @@ import {
   Users,
   Gem,
   Download,
-  Menu
+  Menu,
+  Moon
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -226,6 +227,12 @@ export default function App() {
   const [showShareOptions, setShowShareOptions] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isDarkMode') === 'true';
+    }
+    return false;
+  });
   const [isDev, setIsDev] = React.useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('isDev') === 'true';
@@ -252,6 +259,12 @@ export default function App() {
     const newState = !isDev;
     setIsDev(newState);
     localStorage.setItem('isDev', String(newState));
+  };
+
+  const toggleDarkMode = () => {
+    const newState = !isDarkMode;
+    setIsDarkMode(newState);
+    localStorage.setItem('isDarkMode', String(newState));
   };
 
   React.useEffect(() => {
@@ -331,9 +344,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-pink-50 font-sans text-emerald-900 selection:bg-pink-200">
+    <div className={cn(
+      "min-h-screen font-sans transition-colors duration-500",
+      isDarkMode ? "bg-slate-950 text-slate-100 selection:bg-blue-900" : "bg-pink-50 text-emerald-900 selection:bg-pink-200"
+    )}>
       {/* Navigation / Header */}
-      <nav className="fixed top-0 w-full bg-pink-100/80 backdrop-blur-md z-50 border-b border-pink-200">
+      <nav className={cn(
+        "fixed top-0 w-full backdrop-blur-md z-50 border-b transition-colors duration-500",
+        isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-pink-100/80 border-pink-200"
+      )}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sun className="w-8 h-8 text-amber-500 fill-amber-500/20" />
@@ -375,6 +394,16 @@ export default function App() {
             <a href="#contato" className="hover:text-blue-600 transition-colors">Contato</a>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={toggleDarkMode}
+              className={cn(
+                "p-2 rounded-full transition-all hover:scale-110",
+                isDarkMode ? "bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.4)]" : "bg-blue-900 text-white"
+              )}
+              title={isDarkMode ? "Modo Dia" : "Modo Noturno"}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <a 
               href="#arquivos"
               className="flex px-4 sm:px-6 py-2 bg-amber-500 text-white text-[10px] sm:text-xs font-bold rounded-full hover:bg-amber-400 transition-all items-center gap-1 sm:gap-2 shadow-sm"
@@ -440,10 +469,19 @@ export default function App() {
 
       <main className="pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-pink-200 to-pink-50 pt-20 pb-32">
+        <section className={cn(
+          "relative overflow-hidden pt-20 pb-32 transition-colors duration-500",
+          isDarkMode ? "bg-gradient-to-b from-slate-900 to-slate-950" : "bg-gradient-to-b from-pink-200 to-pink-50"
+        )}>
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-pink-300 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-200 rounded-full blur-3xl" />
+            <div className={cn(
+              "absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl",
+              isDarkMode ? "bg-blue-900" : "bg-pink-300"
+            )} />
+            <div className={cn(
+              "absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl",
+              isDarkMode ? "bg-indigo-900" : "bg-blue-200"
+            )} />
           </div>
 
           <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
@@ -452,16 +490,28 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-block px-4 py-1.5 mb-6 text-xs font-bold tracking-widest uppercase bg-emerald-100 text-emerald-800 rounded-full">
+              <span className={cn(
+                "inline-block px-4 py-1.5 mb-6 text-xs font-bold tracking-widest uppercase rounded-full",
+                isDarkMode ? "bg-blue-900/50 text-blue-200" : "bg-emerald-100 text-emerald-800"
+              )}>
                 Missão Jaguar: O Chamado de Pai Seta Branca
               </span>
-              <h2 className="text-2xl md:text-3xl font-serif font-bold text-emerald-600 mb-4 uppercase tracking-wider">
+              <h2 className={cn(
+                "text-2xl md:text-3xl font-serif font-bold mb-4 uppercase tracking-wider",
+                isDarkMode ? "text-amber-500" : "text-emerald-600"
+              )}>
                 Vale do Amanhecer: A Luz da Nova Era
               </h2>
-              <h1 className="text-4xl md:text-6xl font-serif font-bold text-blue-900 leading-[1.1] mb-6">
-                Doutrinador: Domine a Ciência de Tia Neiva e <span className="text-emerald-700 italic">Cumpra seu Dever Sagrado</span> — Porque Fora da Caridade não há Salvação.
+              <h1 className={cn(
+                "text-4xl md:text-6xl font-serif font-bold leading-[1.1] mb-6",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>
+                Doutrinador: Domine a Ciência de Tia Neiva e <span className={isDarkMode ? "text-amber-400 italic" : "text-emerald-700 italic"}>Cumpra seu Dever Sagrado</span> — Porque Fora da Caridade não há Salvação.
               </h1>
-              <p className="text-lg md:text-xl text-emerald-700 max-w-2xl mx-auto mb-10 leading-relaxed">
+              <p className={cn(
+                "text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed",
+                isDarkMode ? "text-slate-300" : "text-emerald-700"
+              )}>
                 Acesse o método iniciático que revela como manipular as forças espirituais com precisão para realizar curas reais e evoluir sua jornada como Jaguar.
               </p>
             </motion.div>
@@ -556,14 +606,23 @@ export default function App() {
         </section>
 
         {/* História Section */}
-        <section id="historia" className="py-24 bg-white scroll-mt-24">
+        <section id="historia" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Nossa História</h2>
-              <p className="text-emerald-700">A trajetória de Tia Neiva e a fundação do Vale do Amanhecer.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Nossa História</h2>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>A trajetória de Tia Neiva e a fundação do Vale do Amanhecer.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="rounded-3xl overflow-hidden shadow-xl">
+              <div className={cn(
+                "rounded-3xl overflow-hidden shadow-xl",
+                isDarkMode ? "border-4 border-slate-800" : ""
+              )}>
                 <EditableImage 
                   id="history-img"
                   isDev={isDev}
@@ -572,14 +631,20 @@ export default function App() {
                   className="w-full h-full"
                 />
               </div>
-              <div className="space-y-6 text-emerald-800 leading-relaxed">
+              <div className={cn(
+                "space-y-6 leading-relaxed",
+                isDarkMode ? "text-slate-300" : "text-emerald-800"
+              )}>
                 <p>
                   Tudo começou com a clarividência de Neiva Chaves Zelaya, carinhosamente conhecida como Tia Neiva. Em 1959, ela iniciou sua missão espiritual que culminaria na fundação do Vale do Amanhecer.
                 </p>
                 <p>
                   A Doutrina do Amanhecer é um sistema de vida espiritual que busca o equilíbrio do ser humano através do conhecimento de si mesmo e da caridade incondicional.
                 </p>
-                <div className="p-6 bg-pink-50 rounded-2xl border-l-4 border-emerald-500 italic">
+                <div className={cn(
+                  "p-6 rounded-2xl border-l-4 italic",
+                  isDarkMode ? "bg-slate-800 border-amber-500 text-amber-200" : "bg-pink-50 border-emerald-500 text-emerald-800"
+                )}>
                   "Minha missão é preparar o homem para a Nova Era, através do amor e do perdão." - Tia Neiva
                 </div>
               </div>
@@ -588,39 +653,45 @@ export default function App() {
         </section>
 
         {/* Benefits Section */}
-        <section id="beneficios" className="py-24 bg-pink-50 scroll-mt-24">
+        <section id="beneficios" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-pink-50"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>
                 Transformações Reais no Vale do Amanhecer
               </h2>
-              <p className="text-emerald-700">Baseado nos ensinamentos iniciáticos de Tia Neiva</p>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>Baseado nos ensinamentos iniciáticos de Tia Neiva</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  icon: <Heart className="w-8 h-8 text-rose-500" />,
+                  icon: <Heart className={cn("w-8 h-8", isDarkMode ? "text-rose-400" : "text-rose-500")} />,
                   title: "Equilíbrio Mediúnico",
                   desc: "Alcance a estabilidade necessária para atuar com segurança nos trabalhos do Templo."
                 },
                 {
-                  icon: <BookOpen className="w-8 h-8 text-emerald-500" />,
+                  icon: <BookOpen className={cn("w-8 h-8", isDarkMode ? "text-emerald-400" : "text-emerald-500")} />,
                   title: "Leis do Amanhecer",
                   desc: "Compreensão profunda das leis que regem o Doutrinador e o Apará."
                 },
                 {
-                  icon: <ShieldCheck className="w-8 h-8 text-blue-500" />,
+                  icon: <ShieldCheck className={cn("w-8 h-8", isDarkMode ? "text-blue-400" : "text-blue-500")} />,
                   title: "Proteção Espiritual",
                   desc: "Fortaleça sua aura através do conhecimento iniciático e da manipulação correta das energias."
                 },
                 {
-                  icon: <Sun className="w-8 h-8 text-amber-500" />,
+                  icon: <Sun className={cn("w-8 h-8", isDarkMode ? "text-amber-400" : "text-amber-500")} />,
                   title: "Paz Interior",
                   desc: "Clareza mental e serenidade para conduzir trabalhos de desobsessão e cura."
                 },
                 {
-                  icon: <Award className="w-8 h-8 text-purple-500" />,
+                  icon: <Award className={cn("w-8 h-8", isDarkMode ? "text-purple-400" : "text-purple-500")} />,
                   title: "Maestria Doutrinária",
                   desc: "Torne-se um Jaguar preparado para os desafios da Nova Era."
                 }
@@ -628,11 +699,20 @@ export default function App() {
                 <motion.div
                   key={idx}
                   whileHover={{ y: -5 }}
-                  className="p-8 rounded-2xl border border-pink-200 bg-white/50 hover:bg-white hover:shadow-xl transition-all"
+                  className={cn(
+                    "p-8 rounded-2xl border transition-all",
+                    isDarkMode ? "bg-slate-900 border-slate-800 hover:bg-slate-800 hover:shadow-2xl" : "bg-white/50 border-pink-200 hover:bg-white hover:shadow-xl"
+                  )}
                 >
                   <div className="mb-4">{benefit.icon}</div>
-                  <h3 className="text-xl font-bold text-blue-900 mb-2">{benefit.title}</h3>
-                  <p className="text-emerald-700 leading-relaxed">{benefit.desc}</p>
+                  <h3 className={cn(
+                    "text-xl font-bold mb-2",
+                    isDarkMode ? "text-white" : "text-blue-900"
+                  )}>{benefit.title}</h3>
+                  <p className={cn(
+                    "leading-relaxed",
+                    isDarkMode ? "text-slate-400" : "text-emerald-700"
+                  )}>{benefit.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -722,36 +802,52 @@ export default function App() {
         </section>
 
         {/* Jornada do Jaguar Header */}
-        <section className="py-12 bg-blue-900 text-white text-center">
-          <h2 className="text-3xl md:text-5xl font-serif font-bold mb-4">A Jornada do Jaguar</h2>
-          <p className="text-pink-100 max-w-2xl mx-auto">Conheça os degraus da evolução mediúnica em nossa doutrina.</p>
+        <section className={cn(
+          "py-12 text-center transition-colors duration-500",
+          isDarkMode ? "bg-slate-950 text-white" : "bg-blue-900 text-white"
+        )}>
+          <h2 className={cn(
+            "text-3xl md:text-5xl font-serif font-bold mb-4",
+            isDarkMode ? "text-amber-500" : "text-white"
+          )}>A Jornada do Jaguar</h2>
+          <p className={isDarkMode ? "text-slate-400" : "text-pink-100"}>Conheça os degraus da evolução mediúnica em nossa doutrina.</p>
         </section>
 
         {/* Desenvolvimento Section */}
-        <section id="desenvolvimento" className="py-24 bg-white scroll-mt-24">
+        <section id="desenvolvimento" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="md:w-1/2">
-                <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-6">Desenvolvimento Mediúnico</h2>
-                <p className="text-lg text-emerald-800 mb-6 leading-relaxed">
+                <h2 className={cn(
+                  "text-3xl md:text-4xl font-serif font-bold mb-6",
+                  isDarkMode ? "text-white" : "text-blue-900"
+                )}>Desenvolvimento Mediúnico</h2>
+                <p className={cn(
+                  "text-lg mb-6 leading-relaxed",
+                  isDarkMode ? "text-slate-300" : "text-emerald-800"
+                )}>
                   O primeiro passo na jornada do Jaguar. Aqui, o médium aprende a equilibrar suas energias e a entender a sua missão espiritual sob a orientação dos Mestres.
                 </p>
                 <ul className="space-y-4">
-                  <li className="flex items-start gap-3 text-emerald-700">
-                    <CheckCircle2 className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
-                    <span>Equilíbrio dos plexos e centros nervosos.</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-emerald-700">
-                    <CheckCircle2 className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
-                    <span>Primeiros contatos com a espiritualidade maior.</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-emerald-700">
-                    <CheckCircle2 className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
-                    <span>Desenvolvimento da sensibilidade e percepção.</span>
-                  </li>
+                  {[
+                    "Equilíbrio dos plexos e centros nervosos.",
+                    "Primeiros contatos com a espiritualidade maior.",
+                    "Desenvolvimento da sensibilidade e percepção."
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 className={cn("w-5 h-5 mt-1 shrink-0", isDarkMode ? "text-amber-500" : "text-amber-500")} />
+                      <span className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>{text}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
-              <div className="md:w-1/2 rounded-3xl overflow-hidden shadow-2xl">
+              <div className={cn(
+                "md:w-1/2 rounded-3xl overflow-hidden shadow-2xl",
+                isDarkMode ? "border-4 border-slate-800" : ""
+              )}>
                 <EditableImage 
                   id="dev-img"
                   isDev={isDev}
@@ -765,19 +861,34 @@ export default function App() {
         </section>
 
         {/* Emplacamento Section */}
-        <section id="emplacamento" className="py-24 bg-pink-50 scroll-mt-24">
+        <section id="emplacamento" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-pink-50"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
               <div className="md:w-1/2">
-                <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-6">Emplacamento</h2>
-                <p className="text-lg text-emerald-800 mb-6 leading-relaxed">
+                <h2 className={cn(
+                  "text-3xl md:text-4xl font-serif font-bold mb-6",
+                  isDarkMode ? "text-white" : "text-blue-900"
+                )}>Emplacamento</h2>
+                <p className={cn(
+                  "text-lg mb-6 leading-relaxed",
+                  isDarkMode ? "text-slate-300" : "text-emerald-800"
+                )}>
                   A confirmação da sintonia mediúnica. O momento em que o médium se firma em sua corrente e assume o compromisso de servir à caridade.
                 </p>
-                <div className="p-6 bg-white rounded-2xl border border-pink-200 shadow-sm italic text-emerald-700">
+                <div className={cn(
+                  "p-6 rounded-2xl border italic",
+                  isDarkMode ? "bg-slate-900 border-slate-800 text-amber-200" : "bg-white border-pink-200 shadow-sm text-emerald-700"
+                )}>
                   "O emplacamento é a assinatura do seu compromisso com o Pai Seta Branca."
                 </div>
               </div>
-              <div className="md:w-1/2 rounded-3xl overflow-hidden shadow-2xl">
+              <div className={cn(
+                "md:w-1/2 rounded-3xl overflow-hidden shadow-2xl",
+                isDarkMode ? "border-4 border-slate-800" : ""
+              )}>
                 <EditableImage 
                   id="emplacamento-img"
                   isDev={isDev}
@@ -857,11 +968,17 @@ export default function App() {
 
 
         {/* Mantras Section */}
-        <section id="mantras" className="py-24 bg-pink-50 scroll-mt-24">
+        <section id="mantras" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-pink-50"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Mantras do Vale do Amanhecer</h2>
-              <p className="text-emerald-700">A força vibracional das palavras sagradas.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Mantras do Vale do Amanhecer</h2>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>A força vibracional das palavras sagradas.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-8">
               {[
@@ -870,11 +987,20 @@ export default function App() {
                 { title: "Mantra da Unificação", text: "Senhor, faze com que sejamos um só pensamento, uma só vibração..." },
                 { title: "Mantra de Cura", text: "Que as forças das águas e das matas tragam o alívio e a regeneração..." }
               ].map((mantra, idx) => (
-                <div key={idx} className="p-8 bg-white rounded-3xl border border-pink-200 shadow-sm">
-                  <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+                <div key={idx} className={cn(
+                  "p-8 rounded-3xl border shadow-sm transition-all",
+                  isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-pink-200"
+                )}>
+                  <h3 className={cn(
+                    "text-xl font-bold mb-4 flex items-center gap-2",
+                    isDarkMode ? "text-white" : "text-blue-900"
+                  )}>
                     <Sun className="w-5 h-5 text-amber-500" /> {mantra.title}
                   </h3>
-                  <p className="text-emerald-700 italic leading-relaxed">"{mantra.text}"</p>
+                  <p className={cn(
+                    "italic leading-relaxed",
+                    isDarkMode ? "text-slate-300" : "text-emerald-700"
+                  )}>"{mantra.text}"</p>
                 </div>
               ))}
             </div>
@@ -932,11 +1058,17 @@ export default function App() {
         </section>
 
         {/* Músicas Ciganas Section */}
-        <section id="musicas-ciganas" className="py-24 bg-white scroll-mt-24">
+        <section id="musicas-ciganas" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Músicas Ciganas</h2>
-              <p className="text-emerald-700">A alegria e a liberdade da alma cigana na nossa doutrina.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Músicas Ciganas</h2>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>A alegria e a liberdade da alma cigana na nossa doutrina.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {[
@@ -947,14 +1079,20 @@ export default function App() {
                 { title: "Luz do Oriente", duration: "3:30" },
                 { title: "Vento de Liberdade", duration: "4:45" }
               ].map((music, idx) => (
-                <div key={idx} className="flex items-center justify-between p-6 bg-pink-50 rounded-2xl border border-pink-100 hover:bg-pink-100 transition-colors cursor-pointer group">
+                <div key={idx} className={cn(
+                  "flex items-center justify-between p-6 rounded-2xl border transition-colors cursor-pointer group",
+                  isDarkMode ? "bg-slate-800 border-slate-700 hover:bg-slate-700" : "bg-pink-50 border-pink-100 hover:bg-pink-100"
+                )}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center text-white group-hover:scale-110 transition-transform">
                       <PlayCircle className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-blue-900">{music.title}</h3>
-                      <p className="text-xs text-emerald-600">Espiritualidade Cigana</p>
+                      <h3 className={cn(
+                        "font-bold",
+                        isDarkMode ? "text-white" : "text-blue-900"
+                      )}>{music.title}</h3>
+                      <p className={isDarkMode ? "text-slate-400 text-xs" : "text-emerald-600 text-xs"}>Espiritualidade Cigana</p>
                     </div>
                   </div>
                   <span className="text-xs font-mono text-emerald-500">{music.duration}</span>
@@ -965,15 +1103,24 @@ export default function App() {
         </section>
 
         {/* Fotos Section */}
-        <section id="fotos" className="py-24 bg-pink-50 scroll-mt-24">
+        <section id="fotos" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-pink-50"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Galeria de Fotos</h2>
-              <p className="text-emerald-700">Momentos sagrados e a beleza da nossa Doutrina.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Galeria de Fotos</h2>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>Momentos sagrados e a beleza da nossa Doutrina.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:scale-105 transition-transform cursor-pointer">
+                <div key={i} className={cn(
+                  "aspect-square rounded-2xl overflow-hidden shadow-md hover:scale-105 transition-transform cursor-pointer",
+                  isDarkMode ? "border-2 border-slate-800" : ""
+                )}>
                   <EditableImage 
                     id={`gallery-${i}`}
                     isDev={isDev}
@@ -988,50 +1135,62 @@ export default function App() {
         </section>
 
         {/* Downloads Section */}
-        <section id="arquivos" className="py-24 bg-white scroll-mt-24">
+        <section id="arquivos" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Downloads e Acervo Digital</h2>
-              <p className="text-emerald-700 max-w-2xl mx-auto">Acesse e baixe nosso acervo completo de livros, leis, áudios e materiais de estudo.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Downloads e Acervo Digital</h2>
+              <p className={cn(
+                "max-w-2xl mx-auto",
+                isDarkMode ? "text-slate-400" : "text-emerald-700"
+              )}>Acesse e baixe nosso acervo completo de livros, leis, áudios e materiais de estudo.</p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12 items-center mb-24">
               <div className="space-y-8">
-                <div className="flex gap-6 items-start p-6 bg-pink-50 rounded-3xl border border-pink-100 hover:shadow-lg transition-all">
-                  <div className="w-14 h-14 bg-blue-900 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg">
-                    <BookOpen className="w-7 h-7" />
+                {[
+                  { icon: <BookOpen className="w-7 h-7" />, title: "Livros e Leis", desc: "Obras completas de Tia Neiva, leis do amanhecer e manuais de instrução para médiuns.", bg: "bg-blue-900" },
+                  { icon: <PlayCircle className="w-7 h-7" />, title: "Áudios e Mantras", desc: "Gravações originais de mantras, preces e instruções sonoras para harmonização.", bg: "bg-amber-500" },
+                  { icon: <File className="w-7 h-7" />, title: "Materiais de Estudo", desc: "Apostilas de desenvolvimento, iniciação, elevação e centúria para sua jornada.", bg: "bg-emerald-500" }
+                ].map((item, i) => (
+                  <div key={i} className={cn(
+                    "flex gap-6 items-start p-6 rounded-3xl border transition-all",
+                    isDarkMode ? "bg-slate-800 border-slate-700 hover:shadow-lg" : "bg-pink-50 border-pink-100 hover:shadow-lg"
+                  )}>
+                    <div className={cn(
+                      "w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg",
+                      item.bg
+                    )}>
+                      {item.icon}
+                    </div>
+                    <div>
+                      <h3 className={cn(
+                        "text-xl font-bold mb-2",
+                        isDarkMode ? "text-white" : "text-blue-900"
+                      )}>{item.title}</h3>
+                      <p className={cn(
+                        "text-sm leading-relaxed",
+                        isDarkMode ? "text-slate-400" : "text-emerald-700"
+                      )}>{item.desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-blue-900 mb-2">Livros e Leis</h3>
-                    <p className="text-emerald-700 text-sm leading-relaxed">Obras completas de Tia Neiva, leis do amanhecer e manuais de instrução para médiuns.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6 items-start p-6 bg-pink-50 rounded-3xl border border-pink-100 hover:shadow-lg transition-all">
-                  <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg">
-                    <PlayCircle className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-blue-900 mb-2">Áudios e Mantras</h3>
-                    <p className="text-emerald-700 text-sm leading-relaxed">Gravações originais de mantras, preces e instruções sonoras para harmonização.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6 items-start p-6 bg-pink-50 rounded-3xl border border-pink-100 hover:shadow-lg transition-all">
-                  <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg">
-                    <File className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-blue-900 mb-2">Materiais de Estudo</h3>
-                    <p className="text-emerald-700 text-sm leading-relaxed">Apostilas de desenvolvimento, iniciação, elevação e centúria para sua jornada.</p>
-                  </div>
-                </div>
+                ))}
               </div>
 
-              <div className="bg-blue-900 rounded-[3rem] p-12 text-center text-white shadow-2xl relative overflow-hidden group">
+              <div className={cn(
+                "rounded-[3rem] p-12 text-center text-white shadow-2xl relative overflow-hidden group",
+                isDarkMode ? "bg-slate-950" : "bg-blue-900"
+              )}>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/10 transition-all"></div>
                 <div className="relative z-10">
                   <Sun className="w-16 h-16 text-amber-400 mx-auto mb-6 animate-pulse" />
                   <h3 className="text-3xl font-serif font-bold mb-4">Acesso ao Acervo Completo</h3>
-                  <p className="text-blue-100 mb-8 leading-relaxed">
+                  <p className={isDarkMode ? "text-slate-300 mb-8 leading-relaxed" : "text-blue-100 mb-8 leading-relaxed"}>
                     Clique no botão abaixo para ser redirecionado ao nosso Google Drive oficial com todos os materiais da Doutrina do Amanhecer.
                   </p>
                   <a 
@@ -1042,7 +1201,10 @@ export default function App() {
                   >
                     <LinkIcon className="w-6 h-6" /> Acessar Google Drive
                   </a>
-                  <p className="mt-6 text-xs text-blue-300">
+                  <p className={cn(
+                    "mt-6 text-xs",
+                    isDarkMode ? "text-slate-500" : "text-blue-300"
+                  )}>
                     * Requer conta Google para visualização e download.
                   </p>
                 </div>
@@ -1052,8 +1214,11 @@ export default function App() {
             {isDev && (
               <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-serif font-bold text-blue-900">Portal de Upload do Jaguar</h3>
-                  <p className="text-emerald-700 mt-2 text-sm">Contribua com o acervo enviando seus próprios arquivos.</p>
+                  <h3 className={cn(
+                    "text-2xl font-serif font-bold",
+                    isDarkMode ? "text-white" : "text-blue-900"
+                  )}>Portal de Upload do Jaguar</h3>
+                  <p className={isDarkMode ? "text-slate-400 mt-2 text-sm" : "text-emerald-700 mt-2 text-sm"}>Contribua com o acervo enviando seus próprios arquivos.</p>
                 </div>
                 {/* Upload Zone */}
                 <div
@@ -1062,7 +1227,8 @@ export default function App() {
                   onDrop={handleDrop}
                   className={cn(
                     "relative border-2 border-dashed rounded-[2rem] p-12 text-center transition-all duration-300",
-                    isDragging ? "border-amber-500 bg-amber-50" : "border-pink-200 bg-pink-50/30 hover:bg-pink-50"
+                    isDragging ? "border-amber-500 bg-amber-50" : 
+                    isDarkMode ? "border-slate-800 bg-slate-900/50 hover:bg-slate-900" : "border-pink-200 bg-pink-50/30 hover:bg-pink-50"
                   )}
                 >
                   <input
@@ -1072,12 +1238,18 @@ export default function App() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm text-amber-500">
+                    <div className={cn(
+                      "w-16 h-16 rounded-full flex items-center justify-center shadow-sm text-amber-500",
+                      isDarkMode ? "bg-slate-800" : "bg-white"
+                    )}>
                       <Upload className="w-8 h-8" />
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-blue-900">Arraste seus arquivos aqui</p>
-                      <p className="text-sm text-emerald-600">Ou clique para selecionar imagens, vídeos e documentos</p>
+                      <p className={cn(
+                        "text-lg font-bold",
+                        isDarkMode ? "text-white" : "text-blue-900"
+                      )}>Arraste seus arquivos aqui</p>
+                      <p className={isDarkMode ? "text-slate-400 text-sm" : "text-emerald-600 text-sm"}>Ou clique para selecionar imagens, vídeos e documentos</p>
                     </div>
                     <div className="flex gap-4 mt-2">
                       <ImageIcon className="w-5 h-5 text-pink-400" />
@@ -1094,22 +1266,34 @@ export default function App() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mt-8 space-y-3"
                   >
-                    <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                    <h3 className={cn(
+                      "font-bold flex items-center gap-2",
+                      isDarkMode ? "text-white" : "text-blue-900"
+                    )}>
                       Arquivos Selecionados ({uploadedFiles.length})
                     </h3>
                     <div className="grid gap-3">
                       {uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-4 bg-white border border-pink-100 rounded-xl shadow-sm">
+                        <div key={idx} className={cn(
+                          "flex items-center justify-between p-4 border rounded-xl shadow-sm",
+                          isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
+                        )}>
                           <div className="flex items-center gap-3 overflow-hidden">
                             {file.type.startsWith('image/') ? <ImageIcon className="w-5 h-5 text-pink-400 shrink-0" /> :
                              file.type.startsWith('video/') ? <Video className="w-5 h-5 text-blue-400 shrink-0" /> :
                              <File className="w-5 h-5 text-emerald-400 shrink-0" />}
-                            <span className="text-sm font-medium text-emerald-800 truncate">{file.name}</span>
+                            <span className={cn(
+                              "text-sm font-medium truncate",
+                              isDarkMode ? "text-slate-200" : "text-emerald-800"
+                            )}>{file.name}</span>
                             <span className="text-xs text-emerald-500 shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                           </div>
                           <button
                             onClick={() => removeFile(idx)}
-                            className="p-1 hover:bg-pink-50 rounded-full text-rose-500 transition-colors"
+                            className={cn(
+                              "p-1 rounded-full text-rose-500 transition-colors",
+                              isDarkMode ? "hover:bg-slate-800" : "hover:bg-pink-50"
+                            )}
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1129,13 +1313,19 @@ export default function App() {
         </section>
 
         {/* Blog Section */}
-        <section id="blog" className="py-24 bg-white scroll-mt-24">
+        <section id="blog" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-white"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>
                 Blog do Amanhecer
               </h2>
-              <p className="text-emerald-700">Artigos e reflexões para a sua jornada espiritual</p>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>Artigos e reflexões para a sua jornada espiritual</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -1162,7 +1352,10 @@ export default function App() {
                 <motion.div
                   key={idx}
                   whileHover={{ y: -5 }}
-                  className="group rounded-2xl overflow-hidden border border-pink-100 bg-white shadow-sm hover:shadow-xl transition-all"
+                  className={cn(
+                    "group rounded-2xl overflow-hidden border transition-all hover:shadow-xl",
+                    isDarkMode ? "bg-slate-900 border-slate-800 shadow-sm" : "bg-white border-pink-100 shadow-sm"
+                  )}
                 >
                   <div className="aspect-video overflow-hidden">
                     <EditableImage 
@@ -1174,10 +1367,22 @@ export default function App() {
                     />
                   </div>
                   <div className="p-6">
-                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">{post.date}</span>
-                    <h3 className="text-xl font-bold text-blue-900 mt-2 mb-3 group-hover:text-blue-600 transition-colors">{post.title}</h3>
-                    <p className="text-emerald-700 text-sm leading-relaxed mb-4">{post.excerpt}</p>
-                    <a href="#" className="text-blue-600 font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                    <span className={cn(
+                      "text-xs font-bold uppercase tracking-wider",
+                      isDarkMode ? "text-amber-500" : "text-emerald-600"
+                    )}>{post.date}</span>
+                    <h3 className={cn(
+                      "text-xl font-bold mt-2 mb-3 group-hover:text-blue-600 transition-colors",
+                      isDarkMode ? "text-white" : "text-blue-900"
+                    )}>{post.title}</h3>
+                    <p className={cn(
+                      "text-sm leading-relaxed mb-4",
+                      isDarkMode ? "text-slate-400" : "text-emerald-700"
+                    )}>{post.excerpt}</p>
+                    <a href="#" className={cn(
+                      "font-bold text-sm flex items-center gap-1 hover:gap-2 transition-all",
+                      isDarkMode ? "text-amber-500" : "text-blue-600"
+                    )}>
                       Ler mais <Sparkles className="w-4 h-4" />
                     </a>
                   </div>
@@ -1188,9 +1393,15 @@ export default function App() {
         </section>
 
         {/* Guarantee Section */}
-        <section id="garantia" className="py-24 bg-pink-100 scroll-mt-24">
+        <section id="garantia" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-pink-100"
+        )}>
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <div className="inline-block p-4 bg-white rounded-full shadow-sm mb-8">
+            <div className={cn(
+              "inline-block p-4 rounded-full shadow-sm mb-8",
+              isDarkMode ? "bg-slate-800" : "bg-white"
+            )}>
               <EditableImage 
                 id="guarantee-seal"
                 isDev={isDev}
@@ -1199,49 +1410,73 @@ export default function App() {
                 className="w-16 h-16"
               />
             </div>
-            <h2 className="text-3xl font-serif font-bold text-blue-900 mb-6">Sua Missão Sem Riscos</h2>
-            <p className="text-lg text-emerald-800 mb-8 leading-relaxed">
+            <h2 className={cn(
+              "text-3xl font-serif font-bold mb-6",
+              isDarkMode ? "text-white" : "text-blue-900"
+            )}>Sua Missão Sem Riscos</h2>
+            <p className={cn(
+              "text-lg mb-8 leading-relaxed",
+              isDarkMode ? "text-slate-300" : "text-emerald-800"
+            )}>
               Temos tanta confiança nos estudos deixados por Tia Neiva que oferecemos uma 
               <span className="font-bold"> Garantia Incondicional de 7 Dias</span>. Se por qualquer motivo você sentir que este conhecimento não é para você, devolvemos seu investimento integralmente. Sem perguntas, sem burocracia.
             </p>
-            <div className="flex flex-wrap justify-center gap-4 text-sm font-medium text-blue-800">
-              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Satisfação Garantida</span>
-              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Risco Zero</span>
-              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Compromisso Espiritual</span>
+            <div className={cn(
+              "flex flex-wrap justify-center gap-4 text-sm font-medium",
+              isDarkMode ? "text-slate-400" : "text-blue-800"
+            )}>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Satisfação Garantida</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Risco Zero</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Compromisso Espiritual</span>
             </div>
           </div>
         </section>
 
         {/* Contact Section */}
-        <section id="contato" className="py-24 bg-pink-50 scroll-mt-24">
+        <section id="contato" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-pink-50"
+        )}>
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Entre em Contato</h2>
-              <p className="text-emerald-700">Dúvidas sobre a jornada ou o portal? Estamos aqui para ajudar.</p>
+              <h2 className={cn(
+                "text-3xl md:text-4xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Entre em Contato</h2>
+              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>Dúvidas sobre a jornada ou o portal? Estamos aqui para ajudar.</p>
             </div>
 
-            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-xl overflow-hidden border border-pink-100">
+            <div className={cn(
+              "max-w-4xl mx-auto rounded-[3rem] shadow-xl overflow-hidden border",
+              isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
+            )}>
               <div className="flex flex-col md:flex-row">
                 {/* Contact Info */}
-                <div className="md:w-1/3 bg-blue-900 p-12 text-white">
+                <div className={cn(
+                  "md:w-1/3 p-12 text-white",
+                  isDarkMode ? "bg-slate-800" : "bg-blue-900"
+                )}>
                   <h3 className="text-2xl font-serif font-bold mb-8">Informações</h3>
                   <div className="space-y-6">
                     <div className="flex items-start gap-4">
                       <Sun className="w-6 h-6 text-amber-500 shrink-0" />
                       <div>
                         <p className="font-bold text-sm">Vale do Amanhecer</p>
-                        <p className="text-xs text-pink-100 opacity-70">Planaltina, DF - Brasil</p>
+                        <p className="text-xs opacity-70">Planaltina, DF - Brasil</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
                       <MessageSquare className="w-6 h-6 text-emerald-400 shrink-0" />
                       <div>
                         <p className="font-bold text-sm">Atendimento</p>
-                        <p className="text-xs text-pink-100 opacity-70">Segunda a Sexta, 9h às 18h</p>
+                        <p className="text-xs opacity-70">Segunda a Sexta, 9h às 18h</p>
                       </div>
                     </div>
                   </div>
-                  <div className="mt-12 p-6 bg-white/10 rounded-2xl border border-white/10 italic text-sm">
+                  <div className={cn(
+                    "mt-12 p-6 rounded-2xl border italic text-sm",
+                    isDarkMode ? "bg-white/5 border-white/5" : "bg-white/10 border-white/10"
+                  )}>
                     "Salve Deus! Onde houver um Jaguar, haverá uma luz acesa."
                   </div>
                 </div>
@@ -1251,39 +1486,66 @@ export default function App() {
                   <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">Nome</label>
+                        <label className={cn(
+                          "text-xs font-bold uppercase tracking-wider ml-1",
+                          isDarkMode ? "text-slate-500" : "text-emerald-800"
+                        )}>Nome</label>
                         <input 
                           type="text" 
                           placeholder="Seu nome completo"
-                          className="w-full px-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900"
+                          className={cn(
+                            "w-full px-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border",
+                            isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                          )}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">E-mail</label>
+                        <label className={cn(
+                          "text-xs font-bold uppercase tracking-wider ml-1",
+                          isDarkMode ? "text-slate-500" : "text-emerald-800"
+                        )}>E-mail</label>
                         <input 
                           type="email" 
                           placeholder="seu@email.com"
-                          className="w-full px-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900"
+                          className={cn(
+                            "w-full px-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border",
+                            isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                          )}
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">Assunto</label>
+                      <label className={cn(
+                        "text-xs font-bold uppercase tracking-wider ml-1",
+                        isDarkMode ? "text-slate-500" : "text-emerald-800"
+                      )}>Assunto</label>
                       <input 
                         type="text" 
                         placeholder="Como podemos ajudar?"
-                        className="w-full px-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900"
+                        className={cn(
+                          "w-full px-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border",
+                          isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                        )}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">Mensagem</label>
+                      <label className={cn(
+                        "text-xs font-bold uppercase tracking-wider ml-1",
+                        isDarkMode ? "text-slate-500" : "text-emerald-800"
+                      )}>Mensagem</label>
                       <textarea 
                         rows={4}
                         placeholder="Escreva sua mensagem aqui..."
-                        className="w-full px-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900 resize-none"
+                        className={cn(
+                          "w-full px-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border resize-none",
+                          isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                        )}
                       ></textarea>
                     </div>
-                    <button className="w-full py-4 bg-amber-500 text-white font-bold rounded-2xl hover:bg-amber-600 transition-all shadow-lg flex items-center justify-center gap-2">
+                    <button className={cn(
+                      "w-full py-4 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2",
+                      isDarkMode ? "bg-amber-600 hover:bg-amber-500" : "bg-amber-500 hover:bg-amber-600"
+                    )}>
                       <Send className="w-5 h-5" /> Enviar Mensagem
                     </button>
                   </form>
@@ -1294,12 +1556,18 @@ export default function App() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 bg-blue-900 text-white text-center">
+        <section className={cn(
+          "py-20 text-center transition-colors duration-500",
+          isDarkMode ? "bg-slate-900 text-white" : "bg-blue-900 text-white"
+        )}>
           <div className="max-w-3xl mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6">
               Jesus Cristo, o Sol da Terra, te chama.
             </h2>
-            <p className="text-pink-100 mb-10 text-lg">
+            <p className={cn(
+              "mb-10 text-lg",
+              isDarkMode ? "text-slate-400" : "text-pink-100"
+            )}>
               Não deixe para amanhã o cumprimento do seu dever espiritual. O Vale do Amanhecer espera por você.
             </p>
             <button className="px-12 py-6 bg-amber-500 hover:bg-amber-600 text-white text-2xl font-bold rounded-full shadow-lg transition-all hover:scale-105 active:scale-95">
@@ -1321,20 +1589,32 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+            className={cn(
+              "relative w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border",
+              isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
+            )}
           >
             <div className="p-8 md:p-12">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className={cn(
+                  "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
+                  isDarkMode ? "bg-slate-800" : "bg-pink-100"
+                )}>
                   <Sun className="w-8 h-8 text-amber-500" />
                 </div>
-                <h2 className="text-2xl font-serif font-bold text-blue-900">Portal do Jaguar</h2>
-                <p className="text-emerald-700 text-sm">Acesse sua jornada espiritual</p>
+                <h2 className={cn(
+                  "text-2xl font-serif font-bold",
+                  isDarkMode ? "text-white" : "text-blue-900"
+                )}>Portal do Jaguar</h2>
+                <p className={isDarkMode ? "text-slate-400" : "text-emerald-700 text-sm"}>Acesse sua jornada espiritual</p>
               </div>
 
               <form className="space-y-6" onSubmit={handleLogin}>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">E-mail</label>
+                  <label className={cn(
+                    "text-xs font-bold uppercase tracking-wider ml-1",
+                    isDarkMode ? "text-slate-500" : "text-emerald-800"
+                  )}>E-mail</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
                     <input 
@@ -1343,13 +1623,19 @@ export default function App() {
                       value={loginData.email}
                       onChange={(e) => setLoginData({...loginData, email: e.target.value})}
                       placeholder="seu@email.com"
-                      className="w-full pl-12 pr-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900"
+                      className={cn(
+                        "w-full pl-12 pr-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border",
+                        isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                      )}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-emerald-800 uppercase tracking-wider ml-1">Senha</label>
+                  <label className={cn(
+                    "text-xs font-bold uppercase tracking-wider ml-1",
+                    isDarkMode ? "text-slate-500" : "text-emerald-800"
+                  )}>Senha</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
                     <input 
@@ -1358,13 +1644,19 @@ export default function App() {
                       value={loginData.password}
                       onChange={(e) => setLoginData({...loginData, password: e.target.value})}
                       placeholder="••••••••"
-                      className="w-full pl-12 pr-4 py-4 bg-pink-50 border border-pink-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-emerald-900"
+                      className={cn(
+                        "w-full pl-12 pr-4 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all border",
+                        isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-pink-50 border-pink-100 text-emerald-900"
+                      )}
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 text-emerald-700 cursor-pointer">
+                  <label className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    isDarkMode ? "text-slate-500" : "text-emerald-700"
+                  )}>
                     <input type="checkbox" className="rounded border-pink-200 text-amber-500 focus:ring-amber-500" />
                     Lembrar de mim
                   </label>
@@ -1377,7 +1669,10 @@ export default function App() {
               </form>
 
               <div className="mt-8 text-center">
-                <p className="text-sm text-emerald-700">
+                <p className={cn(
+                  "text-sm",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}>
                   Ainda não é um Jaguar? <a href="#" className="text-amber-600 font-bold hover:underline">Inicie sua jornada</a>
                 </p>
               </div>
@@ -1385,7 +1680,10 @@ export default function App() {
             
             <button 
               onClick={() => setIsLoginModalOpen(false)}
-              className="absolute top-6 right-6 p-2 hover:bg-pink-50 rounded-full text-emerald-400 transition-colors"
+              className={cn(
+                "absolute top-6 right-6 p-2 rounded-full text-emerald-400 transition-colors",
+                isDarkMode ? "hover:bg-slate-800" : "hover:bg-pink-50"
+              )}
             >
               <X className="w-6 h-6" />
             </button>
@@ -1393,26 +1691,41 @@ export default function App() {
         </div>
       )}
 
-      <footer className="py-12 bg-pink-50 border-t border-pink-200">
+      <footer className={cn(
+        "py-12 transition-colors duration-500 border-t",
+        isDarkMode ? "bg-slate-950 border-slate-900" : "bg-pink-50 border-pink-200"
+      )}>
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex flex-col items-center gap-6 mb-8">
             {isDev && (
               <button 
                 onClick={resetAllImages}
-                className="flex items-center gap-2 text-xs font-bold text-emerald-600 hover:text-amber-600 transition-colors uppercase tracking-widest"
+                className={cn(
+                  "flex items-center gap-2 text-xs font-bold transition-colors uppercase tracking-widest",
+                  isDarkMode ? "text-rose-400 hover:text-rose-300" : "text-emerald-600 hover:text-amber-600"
+                )}
               >
                 <RefreshCw className="w-4 h-4" /> Resetar Todas as Imagens do Site
               </button>
             )}
             <div className="flex items-center justify-center gap-2">
               <Sun className="w-6 h-6 text-amber-500" />
-              <span className="font-serif italic text-lg font-bold text-blue-900">Vale do Amanhecer</span>
+              <span className={cn(
+                "font-serif italic text-lg font-bold",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Vale do Amanhecer</span>
             </div>
           </div>
-          <p className="text-emerald-700 text-sm mb-2">
+          <p className={cn(
+            "text-sm mb-2",
+            isDarkMode ? "text-slate-400" : "text-emerald-700"
+          )}>
             "Salve Deus! Onde houver um Jaguar, haverá uma luz acesa."
           </p>
-          <p className="text-blue-400 text-xs">
+          <p className={cn(
+            "text-xs",
+            isDarkMode ? "text-slate-600" : "text-blue-400"
+          )}>
             © {new Date().getFullYear()} Portal de Estudos Doutrinários. Todos os direitos reservados.
           </p>
         </div>
