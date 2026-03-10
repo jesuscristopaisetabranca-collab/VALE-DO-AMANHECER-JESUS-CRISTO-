@@ -31,7 +31,9 @@ import {
   Send,
   MessageSquare,
   Edit2,
-  RefreshCw
+  RefreshCw,
+  Play,
+  Quote
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -97,6 +99,94 @@ const EditableImage: React.FC<EditableImageProps> = ({ id, defaultSrc, alt, clas
   );
 };
 
+interface EditableVideoProps {
+  id: string;
+  defaultSrc?: string;
+  className?: string;
+}
+
+const EditableVideo: React.FC<EditableVideoProps> = ({ id, defaultSrc, className }) => {
+  const [videoSrc, setVideoSrc] = React.useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`video_${id}`);
+    }
+    return null;
+  });
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setVideoSrc(base64String);
+        localStorage.setItem(`video_${id}`, base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  return (
+    <div className={cn("relative group w-full h-full", className)}>
+      {videoSrc ? (
+        <video 
+          ref={videoRef}
+          src={videoSrc} 
+          className="w-full h-full object-cover"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      ) : (
+        <div className="w-full h-full bg-blue-900/50 flex items-center justify-center">
+          <Video className="w-16 h-16 text-white/20" />
+        </div>
+      )}
+      
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4">
+        <div className="flex gap-3">
+          {videoSrc && (
+            <button 
+              onClick={togglePlay}
+              className="p-4 bg-amber-500 rounded-full text-white shadow-xl hover:scale-110 transition-transform"
+            >
+              {isPlaying ? <X className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+            </button>
+          )}
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="p-4 bg-white rounded-full text-blue-900 shadow-xl hover:scale-110 transition-transform flex items-center gap-2 text-sm font-bold"
+          >
+            <Upload className="w-5 h-5" /> {videoSrc ? 'Alterar Vídeo' : 'Upload Vídeo'}
+          </button>
+        </div>
+      </div>
+      
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleVideoChange} 
+        accept="video/*" 
+        className="hidden" 
+      />
+    </div>
+  );
+};
+
 export default function App() {
   const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -131,9 +221,9 @@ export default function App() {
   };
 
   const resetAllImages = () => {
-    if (confirm("Deseja resetar todas as imagens para o padrão?")) {
+    if (confirm("Deseja resetar todas as imagens e vídeos para o padrão?")) {
       Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('img_')) {
+        if (key.startsWith('img_') || key.startsWith('video_')) {
           localStorage.removeItem(key);
         }
       });
@@ -180,6 +270,7 @@ export default function App() {
               </div>
             </div>
             <a href="#blog" className="hover:text-blue-600 transition-colors">Blog</a>
+            <a href="#perolas" className="hover:text-blue-600 transition-colors">Só as Pérolas</a>
             <a href="#contato" className="hover:text-blue-600 transition-colors">Contato</a>
           </div>
           <div className="flex items-center gap-4">
@@ -226,20 +317,17 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative max-w-3xl mx-auto aspect-video bg-blue-900 rounded-2xl shadow-2xl overflow-hidden group cursor-pointer border-4 border-white"
+              className="relative max-w-3xl mx-auto aspect-video bg-blue-900 rounded-2xl shadow-2xl overflow-hidden group border-4 border-white"
             >
-              <EditableImage 
-                id="vsl-hero"
-                defaultSrc="https://picsum.photos/seed/tianeiva/1200/675" 
-                alt="Tia Neiva - O Segredo da Cura" 
-                className="w-full h-full opacity-70 group-hover:scale-105 transition-transform duration-700"
+              <EditableVideo 
+                id="vsl-video"
+                className="w-full h-full"
               />
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none">
-                <div className="w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform">
-                  <PlayCircle className="w-10 h-10 fill-white text-amber-500" />
-                </div>
+              
+              {/* Overlay content - only shown if no video or on hover if we want, but let's keep it simple */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none group-hover:opacity-0 transition-opacity">
                 <p className="text-xl font-bold mb-2 drop-shadow-md">O Segredo da Cura que Tia Neiva Revelou</p>
-                <p className="text-sm opacity-80 max-w-md">Assista e descubra como elevar sua vibração e cumprir sua missão espiritual.</p>
+                <p className="text-sm opacity-80 max-w-md">Faça o upload do vídeo da aula ou depoimento aqui.</p>
               </div>
 
               {/* Share Button */}
@@ -313,7 +401,7 @@ export default function App() {
         </section>
 
         {/* História Section */}
-        <section id="historia" className="py-24 bg-white">
+        <section id="historia" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Nossa História</h2>
@@ -344,7 +432,7 @@ export default function App() {
         </section>
 
         {/* Benefits Section */}
-        <section id="beneficios" className="py-24 bg-pink-50">
+        <section id="beneficios" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
@@ -404,7 +492,7 @@ export default function App() {
         </section>
 
         {/* Desenvolvimento Section */}
-        <section id="desenvolvimento" className="py-24 bg-white">
+        <section id="desenvolvimento" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="md:w-1/2">
@@ -440,7 +528,7 @@ export default function App() {
         </section>
 
         {/* Emplacamento Section */}
-        <section id="emplacamento" className="py-24 bg-pink-50">
+        <section id="emplacamento" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
               <div className="md:w-1/2">
@@ -465,7 +553,7 @@ export default function App() {
         </section>
 
         {/* Iniciação Section */}
-        <section id="iniciacao" className="py-24 bg-white">
+        <section id="iniciacao" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-6">Iniciação</h2>
             <p className="text-lg text-emerald-800 max-w-3xl mx-auto mb-12">
@@ -485,7 +573,7 @@ export default function App() {
         </section>
 
         {/* Elevação Section */}
-        <section id="elevacao" className="py-24 bg-pink-50">
+        <section id="elevacao" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="bg-blue-900 rounded-[3rem] p-12 text-white overflow-hidden relative">
               <div className="absolute top-0 right-0 p-12 opacity-10">
@@ -505,7 +593,7 @@ export default function App() {
         </section>
 
         {/* Pré Centuria Section */}
-        <section id="pre-centuria" className="py-24 bg-white">
+        <section id="pre-centuria" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Pré Centuria</h2>
@@ -531,7 +619,7 @@ export default function App() {
 
 
         {/* Mantras Section */}
-        <section id="mantras" className="py-24 bg-pink-50">
+        <section id="mantras" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Mantras do Vale do Amanhecer</h2>
@@ -555,8 +643,58 @@ export default function App() {
           </div>
         </section>
 
+        {/* Só as Pérolas Section */}
+        <section id="perolas" className="py-24 bg-blue-900 text-white scroll-mt-24 overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+            <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
+            <div className="absolute bottom-10 right-10 w-64 h-64 bg-amber-500 rounded-full blur-3xl" />
+          </div>
+          
+          <div className="max-w-7xl mx-auto px-4 relative z-10">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-serif font-bold mb-4">Só as Pérolas</h2>
+              <p className="text-pink-100">Ensinamentos e reflexões curtas de Tia Neiva para iluminar seu dia.</p>
+            </div>
+
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+              {[
+                "Não se esqueça que o amor é a única força que pode transformar o mundo.",
+                "O Jaguar é um missionário do amor e do perdão.",
+                "A caridade é o dever de todo Jaguar.",
+                "A humildade é a chave para o conhecimento espiritual.",
+                "O perdão é a libertação da alma.",
+                "A fé remove montanhas, mas o amor constrói mundos.",
+                "O Jaguar não julga, o Jaguar compreende.",
+                "A mediunidade é um sacerdócio de amor.",
+                "Sê humilde em teu coração e grande em tua caridade.",
+                "A luz que você emana é a luz que te guia.",
+                "O silêncio é a voz da alma em prece.",
+                "Trabalhe com amor e a espiritualidade fará o resto."
+              ].map((perola, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="break-inside-avoid p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl hover:bg-white/20 transition-all group"
+                >
+                  <Quote className="w-8 h-8 text-amber-400 mb-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <p className="text-lg font-medium leading-relaxed italic">
+                    "{perola}"
+                  </p>
+                  <div className="mt-6 flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-widest">
+                    <div className="w-8 h-[1px] bg-amber-300/50" />
+                    Tia Neiva
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Músicas Ciganas Section */}
-        <section id="musicas-ciganas" className="py-24 bg-white">
+        <section id="musicas-ciganas" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Músicas Ciganas</h2>
@@ -589,7 +727,7 @@ export default function App() {
         </section>
 
         {/* Fotos Section */}
-        <section id="fotos" className="py-24 bg-pink-50">
+        <section id="fotos" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Galeria de Fotos</h2>
@@ -611,7 +749,7 @@ export default function App() {
         </section>
 
         {/* Portal de Arquivos Section */}
-        <section id="arquivos" className="py-24 bg-white">
+        <section id="arquivos" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Portal de Arquivos do Jaguar</h2>
@@ -692,7 +830,7 @@ export default function App() {
         </section>
 
         {/* Blog Section */}
-        <section id="blog" className="py-24 bg-white">
+        <section id="blog" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
@@ -750,7 +888,7 @@ export default function App() {
         </section>
 
         {/* Guarantee Section */}
-        <section id="garantia" className="py-24 bg-pink-100">
+        <section id="garantia" className="py-24 bg-pink-100 scroll-mt-24">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <div className="inline-block p-4 bg-white rounded-full shadow-sm mb-8">
               <EditableImage 
@@ -774,7 +912,7 @@ export default function App() {
         </section>
 
         {/* Contact Section */}
-        <section id="contato" className="py-24 bg-pink-50">
+        <section id="contato" className="py-24 bg-pink-50 scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Entre em Contato</h2>
