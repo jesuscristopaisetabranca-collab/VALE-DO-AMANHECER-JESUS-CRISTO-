@@ -35,7 +35,9 @@ import {
   Play,
   Quote,
   Users,
-  Gem
+  Gem,
+  Download,
+  Menu
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -217,7 +219,35 @@ export default function App() {
   const [isDragging, setIsDragging] = React.useState(false);
   const [showShareOptions, setShowShareOptions] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [loginData, setLoginData] = React.useState({ email: '', password: '' });
+
+  React.useEffect(() => {
+    const handleInternalLinks = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (link && link.hash && link.hash.startsWith('#') && link.origin === window.location.origin) {
+        e.preventDefault();
+        const targetElement = document.querySelector(link.hash);
+        if (targetElement) {
+          const offset = 80; // Header height
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+          
+          setIsMobileMenuOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleInternalLinks);
+    return () => document.removeEventListener('click', handleInternalLinks);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -293,7 +323,7 @@ export default function App() {
                 <a href="#mantras" className="block py-2 hover:text-blue-600">Mantras</a>
                 <a href="#musicas-ciganas" className="block py-2 hover:text-blue-600">Músicas Ciganas</a>
                 <a href="#fotos" className="block py-2 hover:text-blue-600">Galeria de Fotos</a>
-                <a href="#arquivos" className="block py-2 hover:text-blue-600">Biblioteca Digital (Drive)</a>
+                <a href="#arquivos" className="block py-2 hover:text-blue-600">Downloads (Drive)</a>
               </div>
             </div>
             <a href="#blog" className="hover:text-blue-600 transition-colors">Blog</a>
@@ -301,14 +331,67 @@ export default function App() {
             <a href="#contato" className="hover:text-blue-600 transition-colors">Contato</a>
           </div>
           <div className="flex items-center gap-4">
+            <a 
+              href="#arquivos"
+              className="flex px-4 sm:px-6 py-2 bg-amber-500 text-white text-[10px] sm:text-xs font-bold rounded-full hover:bg-amber-400 transition-all items-center gap-1 sm:gap-2 shadow-sm"
+            >
+              <Download className="w-3 h-3 sm:w-4 h-4" /> Downloads
+            </a>
             <button 
               onClick={() => setIsLoginModalOpen(true)}
-              className="px-6 py-2 bg-blue-900 text-white text-xs font-bold rounded-full hover:bg-blue-800 transition-all flex items-center gap-2"
+              className="hidden sm:flex px-6 py-2 bg-blue-900 text-white text-xs font-bold rounded-full hover:bg-blue-800 transition-all items-center gap-2"
+            >
+              <User className="w-4 h-4" /> Entrar
+            </button>
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 text-blue-900 hover:bg-pink-200/50 rounded-lg transition-colors"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <motion.div
+          initial={false}
+          animate={isMobileMenuOpen ? { height: 'auto', opacity: 1 } : { height: 0, opacity: 0 }}
+          className="lg:hidden bg-white border-b border-pink-100 overflow-hidden"
+        >
+          <div className="px-4 py-6 space-y-4 text-sm font-bold text-emerald-700 uppercase tracking-wider">
+            <div className="space-y-2">
+              <p className="text-[10px] text-pink-400 mb-1">Doutrina</p>
+              <a href="#historia" className="block py-2 hover:text-blue-600">Nossa História</a>
+              <a href="#falanges" className="block py-2 hover:text-blue-600">Falanges do Amanhecer</a>
+              <a href="#povo-cigano" className="block py-2 hover:text-blue-600">Povo Cigano</a>
+              <a href="#beneficios" className="block py-2 hover:text-blue-600">Benefícios</a>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] text-pink-400 mb-1">Jornada</p>
+              <a href="#desenvolvimento" className="block py-2 hover:text-blue-600">Desenvolvimento</a>
+              <a href="#emplacamento" className="block py-2 hover:text-blue-600">Emplacamento</a>
+              <a href="#iniciacao" className="block py-2 hover:text-blue-600">Iniciação</a>
+              <a href="#elevacao" className="block py-2 hover:text-blue-600">Elevação</a>
+              <a href="#pre-centuria" className="block py-2 hover:text-blue-600">Pré Centuria</a>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] text-pink-400 mb-1">Acervo</p>
+              <a href="#mantras" className="block py-2 hover:text-blue-600">Mantras</a>
+              <a href="#musicas-ciganas" className="block py-2 hover:text-blue-600">Músicas Ciganas</a>
+              <a href="#fotos" className="block py-2 hover:text-blue-600">Galeria de Fotos</a>
+              <a href="#arquivos" className="block py-2 hover:text-blue-600">Downloads (Drive)</a>
+            </div>
+            <a href="#blog" className="block py-2 hover:text-blue-600">Blog</a>
+            <a href="#perolas" className="block py-2 hover:text-blue-600">Só as Pérolas</a>
+            <a href="#contato" className="block py-2 hover:text-blue-600">Contato</a>
+            <button 
+              onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
+              className="w-full py-3 bg-blue-900 text-white rounded-xl flex items-center justify-center gap-2"
             >
               <User className="w-4 h-4" /> Entrar
             </button>
           </div>
-        </div>
+        </motion.div>
       </nav>
 
       <main className="pt-16">
@@ -854,12 +937,12 @@ export default function App() {
           </div>
         </section>
 
-        {/* Portal de Arquivos Section */}
+        {/* Downloads Section */}
         <section id="arquivos" className="py-24 bg-white scroll-mt-24">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Biblioteca Digital do Amanhecer</h2>
-              <p className="text-emerald-700 max-w-2xl mx-auto">Acesse nosso acervo completo de livros, leis, áudios e materiais de estudo diretamente no Google Drive.</p>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">Downloads e Acervo Digital</h2>
+              <p className="text-emerald-700 max-w-2xl mx-auto">Acesse e baixe nosso acervo completo de livros, leis, áudios e materiais de estudo.</p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12 items-center mb-24">
@@ -902,7 +985,7 @@ export default function App() {
                     Clique no botão abaixo para ser redirecionado ao nosso Google Drive oficial com todos os materiais da Doutrina do Amanhecer.
                   </p>
                   <a 
-                    href="https://drive.google.com" 
+                    href="https://drive.google.com/drive/my-drive" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-3 px-10 py-5 bg-amber-500 text-white font-bold rounded-full hover:bg-amber-400 hover:scale-105 transition-all shadow-xl"
