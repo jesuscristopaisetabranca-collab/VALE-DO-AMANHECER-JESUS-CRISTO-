@@ -41,7 +41,8 @@ import {
   Menu,
   Moon,
   ArrowUp,
-  Youtube
+  Youtube,
+  ArrowRight
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -365,6 +366,7 @@ export default function App() {
   const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [showShareOptions, setShowShareOptions] = React.useState(false);
+  const [showHeroShareOptions, setShowHeroShareOptions] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [isAcervoModalOpen, setIsAcervoModalOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -530,11 +532,27 @@ export default function App() {
         isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-pink-100/80 border-pink-200"
       )}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sun className="w-8 h-8 text-violet-500 fill-violet-500/20" />
-            <span className="font-serif italic text-xl font-bold tracking-tight text-blue-900">
-              Vale do Amanhecer
-            </span>
+          <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <div className="absolute inset-0 bg-yellow-400 rounded-full blur-md opacity-50 group-hover:opacity-80 transition-opacity animate-pulse"></div>
+              <img 
+                src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=120&h=120&q=80" 
+                alt="Sol do Amanhecer" 
+                className="w-10 h-10 rounded-full object-cover relative z-10 border-2 border-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.5)]"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className={cn(
+                "font-serif italic text-xl font-bold tracking-tight leading-none",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>
+                Vale do Amanhecer
+              </span>
+              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-violet-500 mt-1">
+                Doutrina de Amor
+              </span>
+            </div>
           </div>
           <div className="hidden lg:flex gap-8 text-xs font-bold text-emerald-700 uppercase tracking-wider">
             <div className="group relative">
@@ -571,18 +589,27 @@ export default function App() {
             <a href="#contato" className="hover:text-blue-600 transition-colors">Contato</a>
           </div>
           <div className="flex items-center gap-4">
-            <a 
-              href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                "hidden sm:flex p-2 rounded-full transition-all hover:scale-110",
-                isDarkMode ? "text-rose-500 hover:bg-slate-800" : "text-rose-600 hover:bg-pink-200/50"
-              )}
-              title="Canal Oficial no YouTube"
-            >
-              <Youtube className="w-5 h-5" />
-            </a>
+            <div className="hidden sm:flex items-center gap-1">
+              <motion.div
+                animate={{ x: [0, 3, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                className="flex items-center"
+              >
+                <ArrowRight className="w-4 h-4 text-white bg-rose-600 rounded-full p-0.5 shadow-sm" />
+              </motion.div>
+              <a 
+                href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "p-2 rounded-full transition-all hover:scale-110",
+                  isDarkMode ? "text-rose-500 hover:bg-slate-800" : "text-rose-600 hover:bg-pink-200/50"
+                )}
+                title="Canal Oficial no YouTube"
+              >
+                <Youtube className="w-5 h-5" />
+              </a>
+            </div>
             <button 
               onClick={toggleDarkMode}
               className={cn(
@@ -618,9 +645,24 @@ export default function App() {
         <motion.div
           initial={false}
           animate={isMobileMenuOpen ? { height: 'auto', opacity: 1 } : { height: 0, opacity: 0 }}
-          className="lg:hidden bg-white border-b border-pink-100 overflow-hidden"
+          className={cn(
+            "lg:hidden overflow-hidden transition-colors duration-500",
+            isDarkMode ? "bg-slate-900 border-b border-slate-800" : "bg-white border-b border-pink-100"
+          )}
         >
-          <div className="px-4 py-6 space-y-4 text-sm font-bold text-emerald-700 uppercase tracking-wider">
+          <div className="px-4 py-8 space-y-8 text-sm font-bold text-emerald-700 uppercase tracking-wider">
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=80&h=80&q=80" 
+                alt="Sol do Amanhecer" 
+                className="w-8 h-8 rounded-full object-cover border border-yellow-400 shadow-sm"
+                referrerPolicy="no-referrer"
+              />
+              <span className={cn(
+                "font-serif italic text-lg font-bold tracking-tight",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Vale do Amanhecer</span>
+            </div>
             <div className="space-y-2">
               <p className="text-[10px] text-pink-400 mb-1">Doutrina</p>
               <a href="#historia" className="block py-2 hover:text-blue-600">Nossa História</a>
@@ -792,13 +834,91 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-12"
+              className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <button className="group relative px-10 py-5 bg-violet-500 hover:bg-violet-600 text-white text-xl font-bold rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all hover:-translate-y-1 active:scale-95">
+              <button className="group relative px-10 py-5 bg-violet-500 hover:bg-violet-600 text-white text-xl font-bold rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto">
                 Quero ser curado!
                 <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-violet-300 animate-pulse" />
               </button>
-              <p className="mt-4 text-sm text-emerald-600 flex items-center justify-center gap-2">
+
+              <div className="relative w-full sm:w-auto">
+                <button 
+                  onClick={() => setShowHeroShareOptions(!showHeroShareOptions)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 px-8 py-5 font-bold rounded-full transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto border-2",
+                    isDarkMode 
+                      ? "bg-slate-800 border-slate-700 text-white hover:bg-slate-700" 
+                      : "bg-white border-pink-200 text-emerald-800 hover:bg-pink-50"
+                  )}
+                >
+                  <Share2 className="w-5 h-5" />
+                  Compartilhar
+                </button>
+
+                {showHeroShareOptions && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 bg-white rounded-2xl shadow-2xl p-4 min-w-[220px] border border-pink-100 z-30"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest mb-1 px-2 text-center">Compartilhar Página</p>
+                      <a 
+                        href={`mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareUrl)}`}
+                        className="flex items-center gap-3 p-3 hover:bg-pink-50 rounded-xl text-emerald-800 transition-colors text-sm font-bold"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+                          <Mail className="w-4 h-4 text-rose-500" />
+                        </div>
+                        E-mail
+                      </a>
+                      <a 
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 hover:bg-pink-50 rounded-xl text-emerald-800 transition-colors text-sm font-bold"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Facebook className="w-4 h-4 text-blue-600" />
+                        </div>
+                        Facebook
+                      </a>
+                      <a 
+                        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 hover:bg-pink-50 rounded-xl text-emerald-800 transition-colors text-sm font-bold"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
+                          <Twitter className="w-4 h-4 text-sky-500" />
+                        </div>
+                        Twitter
+                      </a>
+                      <button 
+                        onClick={() => {
+                          copyToClipboard();
+                          setShowHeroShareOptions(false);
+                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-pink-50 rounded-xl text-emerald-800 transition-colors text-sm font-bold w-full text-left"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <LinkIcon className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        Copiar Link
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-6"
+            >
+              <p className="text-sm text-emerald-600 flex items-center justify-center gap-2">
                 <ShieldCheck className="w-4 h-4" /> Acesso imediato ao portal de estudos
               </p>
             </motion.div>
@@ -2287,10 +2407,18 @@ export default function App() {
                 <RefreshCw className="w-4 h-4" /> Resetar Todas as Imagens do Site
               </button>
             )}
-            <div className="flex items-center justify-center gap-2">
-              <Sun className="w-6 h-6 text-violet-500" />
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="relative w-12 h-12 flex items-center justify-center">
+                <div className="absolute inset-0 bg-yellow-400 rounded-full blur-lg opacity-30 animate-pulse"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=120&h=120&q=80" 
+                  alt="Sol do Amanhecer" 
+                  className="w-12 h-12 rounded-full object-cover relative z-10 border-2 border-yellow-200 shadow-lg"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
               <span className={cn(
-                "font-serif italic text-lg font-bold",
+                "font-serif italic text-2xl font-bold tracking-tight",
                 isDarkMode ? "text-white" : "text-blue-900"
               )}>Vale do Amanhecer</span>
             </div>
