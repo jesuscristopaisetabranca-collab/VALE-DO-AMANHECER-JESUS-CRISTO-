@@ -40,6 +40,7 @@ import {
   Download,
   Menu,
   Moon,
+  Instagram,
   ArrowUp,
   Youtube,
   ArrowRight,
@@ -512,6 +513,7 @@ export default function App() {
   const [showHeroShareOptions, setShowHeroShareOptions] = React.useState(false);
   const [selectedPost, setSelectedPost] = React.useState<any>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [templeSearch, setTempleSearch] = React.useState('');
   const [isAcervoModalOpen, setIsAcervoModalOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
@@ -762,6 +764,7 @@ export default function App() {
                 <a href="#musicas-ciganas" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Músicas Ciganas</a>
                 <a href="#videos-destaque" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Vídeos em Destaque</a>
                 <a href="#fotos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Galeria de Fotos</a>
+                <a href="#relacao-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Relação de Templos</a>
                 <a href="#arquivos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Downloads (Drive)</a>
               </div>
             </div>
@@ -919,6 +922,7 @@ export default function App() {
                 <a href="#musicas-ciganas" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Músicas</a>
                 <a href="#videos-destaque" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Vídeos</a>
                 <a href="#fotos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Galeria</a>
+                <a href="#relacao-templos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Relação</a>
                 <a href="#arquivos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Downloads</a>
                 <a href="#blog" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Blog</a>
                 <a href="#assistente-ia" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">IA</a>
@@ -2411,6 +2415,36 @@ export default function App() {
                   )}>
                     "Salve Deus! Onde houver um Jaguar, haverá uma luz acesa."
                   </div>
+
+                  <div className="mt-12 flex items-center gap-4">
+                    <a 
+                      href="https://www.facebook.com/templopelariodoamanhecer" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-violet-500 transition-colors"
+                      title="Facebook"
+                    >
+                      <Facebook className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-rose-600 transition-colors"
+                      title="YouTube"
+                    >
+                      <Youtube className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href="https://linktr.ee/rypuradoamanhecer" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-emerald-500 transition-colors"
+                      title="Linktree"
+                    >
+                      <LinkIcon className="w-5 h-5" />
+                    </a>
+                  </div>
                 </div>
 
                 {/* Contact Form */}
@@ -2607,6 +2641,131 @@ export default function App() {
               >
                 <LinkIcon className="w-5 h-5" /> Ver Lista Completa de Templos
               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Temples Relation Section */}
+        <section id="relacao-templos" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-950" : "bg-pink-50"
+        )}>
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className={cn(
+                "text-3xl md:text-5xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Relação de Templos</h2>
+              <p className={cn(
+                "max-w-2xl mx-auto text-lg mb-8",
+                isDarkMode ? "text-slate-400" : "text-emerald-700"
+              )}>
+                Encontre o Templo do Amanhecer mais próximo de você. Uma rede de luz espalhada por todo o Brasil e exterior.
+              </p>
+              
+              <div className="max-w-md mx-auto relative">
+                <input 
+                  type="text" 
+                  placeholder="Buscar por cidade, estado ou nome..."
+                  value={templeSearch}
+                  onChange={(e) => setTempleSearch(e.target.value)}
+                  className={cn(
+                    "w-full px-6 py-4 rounded-full border-2 focus:outline-none focus:ring-4 transition-all shadow-lg",
+                    isDarkMode 
+                      ? "bg-slate-900 border-slate-800 text-white focus:ring-violet-500/20 focus:border-violet-500" 
+                      : "bg-white border-pink-100 text-emerald-900 focus:ring-pink-200 focus:border-pink-300"
+                  )}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-violet-500">
+                  <LinkIcon className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className={cn(
+              "rounded-[3rem] overflow-hidden border shadow-2xl",
+              isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
+            )}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={cn(
+                      "border-b",
+                      isDarkMode ? "bg-slate-800/50 border-slate-800" : "bg-pink-50/50 border-pink-100"
+                    )}>
+                      <th className="px-8 py-6 text-xs font-bold uppercase tracking-widest text-violet-500">Templo</th>
+                      <th className="px-8 py-6 text-xs font-bold uppercase tracking-widest text-violet-500">Localização</th>
+                      <th className="px-8 py-6 text-xs font-bold uppercase tracking-widest text-violet-500">Informações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: "Templo Mãe", city: "Planaltina", state: "DF", info: "Sede Mundial - Vale do Amanhecer" },
+                      { name: "Templo Pelário", city: "Crato", state: "CE", info: "Vila Lobo - Ativo" },
+                      { name: "Templo Patário", city: "Crato", state: "CE", info: "Av. da Estrela - Vila Lobo" },
+                      { name: "Templo de Olinda", city: "Olinda", state: "PE", info: "Ramificação Nordeste" },
+                      { name: "Templo de Salvador", city: "Salvador", state: "BA", info: "Capital Baiana" },
+                      { name: "Templo de Curitiba", city: "Curitiba", state: "PR", info: "Região Sul" },
+                      { name: "Templo de Manaus", city: "Manaus", state: "AM", info: "Região Norte" },
+                      { name: "Templo de Goiânia", city: "Goiânia", state: "GO", info: "Região Centro-Oeste" },
+                    ].filter(t => 
+                      t.name.toLowerCase().includes(templeSearch.toLowerCase()) ||
+                      t.city.toLowerCase().includes(templeSearch.toLowerCase()) ||
+                      t.state.toLowerCase().includes(templeSearch.toLowerCase())
+                    ).map((temple, idx) => (
+                      <tr 
+                        key={idx}
+                        className={cn(
+                          "border-b last:border-0 hover:bg-violet-500/5 transition-colors",
+                          isDarkMode ? "border-slate-800" : "border-pink-50"
+                        )}
+                      >
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-500">
+                              <Sun className="w-5 h-5" />
+                            </div>
+                            <span className={cn("font-bold", isDarkMode ? "text-white" : "text-blue-900")}>{temple.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>{temple.city} - {temple.state}</span>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className="text-xs italic opacity-70">{temple.info}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="mt-12 text-center">
+              <p className={cn("text-sm mb-6 italic", isDarkMode ? "text-slate-500" : "text-emerald-600")}>
+                * Esta relação é atualizada periodicamente. Para informações oficiais, consulte o Templo Mãe.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <a 
+                  href="https://valedoamanhecer.net.br/templos.php" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-6 py-3 bg-violet-500 text-white rounded-full font-bold hover:bg-violet-600 transition-all shadow-lg"
+                >
+                  <LinkIcon className="w-4 h-4" /> Site Oficial Geral
+                </a>
+                <a 
+                  href="https://share.google/YlJwB2O9hfuIzd6mG" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all shadow-lg border",
+                    isDarkMode ? "bg-slate-800 border-slate-700 text-white hover:bg-slate-700" : "bg-white border-pink-100 text-blue-900 hover:bg-pink-50"
+                  )}
+                >
+                  <File className="w-4 h-4" /> Relação Completa (Google)
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -2857,19 +3016,45 @@ export default function App() {
               <p className={cn(
                 "text-[10px] font-bold uppercase tracking-widest",
                 isDarkMode ? "text-slate-500" : "text-emerald-600"
-              )}>Acompanhe nosso Canal Oficial</p>
-              <a 
-                href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-8 py-4 bg-rose-600 text-white rounded-2xl transition-all hover:scale-105 hover:bg-rose-700 shadow-xl"
-                title="Canal Oficial no YouTube"
-              >
-                <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-md">
-                  <Play className="w-4 h-4 text-rose-600 fill-rose-600 ml-0.5" />
-                </div>
-                <span className="font-bold text-sm">YouTube Amanhecer</span>
-              </a>
+              )}>Acompanhe nossas Redes Oficiais</p>
+              <div className="flex items-center gap-4">
+                <a 
+                  href="https://www.facebook.com/templopelariodoamanhecer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:scale-110 shadow-lg",
+                    isDarkMode ? "bg-slate-900 text-white hover:bg-violet-600" : "bg-white text-blue-900 hover:bg-violet-500 hover:text-white"
+                  )}
+                  title="Facebook"
+                >
+                  <Facebook className="w-6 h-6" />
+                </a>
+                <a 
+                  href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:scale-110 shadow-lg",
+                    isDarkMode ? "bg-slate-900 text-white hover:bg-rose-600" : "bg-white text-rose-600 hover:bg-rose-600 hover:text-white"
+                  )}
+                  title="YouTube"
+                >
+                  <Youtube className="w-6 h-6" />
+                </a>
+                <a 
+                  href="https://linktr.ee/rypuradoamanhecer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:scale-110 shadow-lg",
+                    isDarkMode ? "bg-slate-900 text-white hover:bg-emerald-600" : "bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white"
+                  )}
+                  title="Linktree"
+                >
+                  <LinkIcon className="w-6 h-6" />
+                </a>
+              </div>
             </div>
           </div>
           <p className={cn(
