@@ -713,12 +713,14 @@ export default function App() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "p-2.5 rounded-xl transition-all hover:scale-110",
-                  isDarkMode ? "text-rose-500 hover:bg-slate-800" : "text-rose-600 hover:bg-rose-50"
+                  "p-2 rounded-xl transition-all hover:scale-110",
+                  isDarkMode ? "hover:bg-slate-800" : "hover:bg-rose-50"
                 )}
                 title="Canal Oficial no YouTube"
               >
-                <Youtube className="w-5 h-5" />
+                <div className="bg-rose-600 rounded-lg p-1.5 flex items-center justify-center shadow-md">
+                  <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                </div>
               </a>
             </div>
 
@@ -845,8 +847,10 @@ export default function App() {
                 <User className="w-4 h-4" /> Entrar no Portal
               </button>
               <div className="flex items-center justify-center gap-6">
-                <a href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g" target="_blank" rel="noopener noreferrer" className="text-rose-600">
-                  <Youtube className="w-6 h-6" />
+                <a href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-110">
+                  <div className="bg-rose-600 rounded-xl p-2.5 flex items-center justify-center shadow-lg">
+                    <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                  </div>
                 </a>
                 <button onClick={toggleDarkMode} className={cn(
                   "p-2 rounded-xl",
@@ -2596,7 +2600,9 @@ export default function App() {
                 className="flex items-center gap-3 px-8 py-4 bg-rose-600 text-white rounded-2xl transition-all hover:scale-105 hover:bg-rose-700 shadow-xl"
                 title="Canal Oficial no YouTube"
               >
-                <Youtube className="w-6 h-6" />
+                <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-md">
+                  <Play className="w-4 h-4 text-rose-600 fill-rose-600 ml-0.5" />
+                </div>
                 <span className="font-bold text-sm">YouTube Amanhecer</span>
               </a>
             </div>
