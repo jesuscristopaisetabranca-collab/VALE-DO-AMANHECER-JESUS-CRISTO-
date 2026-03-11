@@ -18,19 +18,35 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  // Configure multer for file uploads
+  // Configure multer for file uploads with security checks
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-      // Use the ID from the request body as the filename
       const id = req.body.id;
-      const ext = path.extname(file.originalname);
-      cb(null, `${id}${ext}`);
+      // Sanitize ID to prevent path traversal
+      const safeId = id.replace(/[^a-z0-9_-]/gi, '_');
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${safeId}${ext}`);
     }
   });
-  const upload = multer({ storage });
+
+  const upload = multer({ 
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB limit for images/media
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm', '.mp3', '.wav'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (allowedExtensions.includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Tipo de arquivo não permitido"));
+      }
+    }
+  });
 
   app.use(express.json());
   app.use("/uploads", express.static(uploadsDir));
