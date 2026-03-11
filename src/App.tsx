@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { get, set, del } from 'idb-keyval';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -63,25 +64,43 @@ interface EditableImageProps {
 }
 
 const EditableImage: React.FC<EditableImageProps> = ({ id, defaultSrc, alt, className, isDev }) => {
-  const [src, setSrc] = React.useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`img_${id}`) || defaultSrc;
-    }
-    return defaultSrc;
-  });
-
+  const [src, setSrc] = React.useState<string>(defaultSrc);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  React.useEffect(() => {
+    const loadImage = async () => {
+      try {
+        const storedImg = await get(`img_${id}`);
+        if (storedImg instanceof Blob) {
+          setSrc(URL.createObjectURL(storedImg));
+        } else if (typeof storedImg === 'string') {
+          setSrc(storedImg);
+        }
+      } catch (err) {
+        console.error("Error loading image from IndexedDB:", err);
+      }
+    };
+    loadImage();
+
+    return () => {
+      if (src && src.startsWith('blob:')) {
+        URL.revokeObjectURL(src);
+      }
+    };
+  }, [id]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setSrc(base64String);
-        localStorage.setItem(`img_${id}`, base64String);
-      };
-      reader.readAsDataURL(file);
+      try {
+        await set(`img_${id}`, file);
+        if (src && src.startsWith('blob:')) {
+          URL.revokeObjectURL(src);
+        }
+        setSrc(URL.createObjectURL(file));
+      } catch (err) {
+        console.error("Error saving image to IndexedDB:", err);
+      }
     }
   };
 
@@ -121,25 +140,77 @@ interface EditableMediaProps {
   isDev?: boolean;
 }
 
+const VideoPlayer: React.FC<{ title: string; id: string; description: string; isDev: boolean; isDarkMode: boolean }> = ({ title, id, description, isDev, isDarkMode }) => {
+  return (
+    <motion.div 
+      whileHover={{ y: -5 }}
+      className={cn(
+        "p-6 rounded-3xl border transition-all h-full flex flex-col",
+        isDarkMode ? "bg-slate-900 border-slate-800 hover:bg-slate-800 hover:shadow-2xl" : "bg-white border-pink-100 hover:shadow-xl"
+      )}
+    >
+      <div className="mb-4">
+        <h3 className={cn(
+          "text-xl font-bold mb-2",
+          isDarkMode ? "text-white" : "text-blue-900"
+        )}>{title}</h3>
+        <p className={cn(
+          "text-sm leading-relaxed",
+          isDarkMode ? "text-slate-400" : "text-emerald-700"
+        )}>{description}</p>
+      </div>
+      <div className="mt-auto aspect-video rounded-2xl overflow-hidden bg-black relative group border-2 border-transparent hover:border-violet-500 transition-all">
+        <EditableMedia 
+          id={id}
+          isDev={isDev}
+          className="w-full h-full"
+        />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity bg-black/20">
+           <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+             <Play className="w-8 h-8 text-white fill-white ml-1" />
+           </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className, isDev }) => {
-  const [mediaSrc, setMediaSrc] = React.useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`media_${id}`);
-    }
-    return null;
-  });
-  const [mediaType, setMediaType] = React.useState<'video' | 'audio' | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`media_type_${id}`) as 'video' | 'audio' | null;
-    }
-    return null;
-  });
+  const [mediaSrc, setMediaSrc] = React.useState<string | null>(null);
+  const [mediaType, setMediaType] = React.useState<'video' | 'audio' | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const mediaRef = React.useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  React.useEffect(() => {
+    const loadMedia = async () => {
+      try {
+        const storedMedia = await get(`media_${id}`);
+        const storedType = await get(`media_type_${id}`);
+        
+        if (storedMedia instanceof Blob) {
+          setMediaSrc(URL.createObjectURL(storedMedia));
+          setMediaType(storedType as 'video' | 'audio');
+        } else if (typeof storedMedia === 'string') {
+          // Backward compatibility for base64 strings from localStorage
+          setMediaSrc(storedMedia);
+          setMediaType(storedType as 'video' | 'audio');
+        }
+      } catch (err) {
+        console.error("Error loading media from IndexedDB:", err);
+      }
+    };
+    loadMedia();
+    
+    return () => {
+      if (mediaSrc && mediaSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaSrc);
+      }
+    };
+  }, [id]);
+
+  const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setError(null);
 
@@ -153,33 +224,46 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
         return;
       }
 
-      // Optional: Check file size (e.g., 50MB limit for localStorage stability)
-      if (file.size > 50 * 1024 * 1024) {
-        setError("O arquivo é muito grande. O limite é de 50MB.");
+      // IndexedDB can handle much larger files than localStorage (typically up to 80% of disk space)
+      // We'll set a reasonable 300MB limit for this app's context
+      if (file.size > 300 * 1024 * 1024) {
+        setError("O arquivo é muito grande. O limite é de 300MB.");
         setTimeout(() => setError(null), 5000);
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
+      try {
         const type = isVideo ? 'video' : 'audio';
-        setMediaSrc(base64String);
+        await set(`media_${id}`, file);
+        await set(`media_type_${id}`, type);
+        
+        if (mediaSrc && mediaSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(mediaSrc);
+        }
+        
+        setMediaSrc(URL.createObjectURL(file));
         setMediaType(type);
-        localStorage.setItem(`media_${id}`, base64String);
-        localStorage.setItem(`media_type_${id}`, type);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Error saving media to IndexedDB:", err);
+        setError("Erro ao salvar o arquivo. O armazenamento do navegador pode estar cheio.");
+      }
     }
   };
 
-  const removeMedia = (e: React.MouseEvent) => {
+  const removeMedia = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Deseja realmente remover este arquivo de mídia?")) {
-      setMediaSrc(null);
-      setMediaType(null);
-      localStorage.removeItem(`media_${id}`);
-      localStorage.removeItem(`media_type_${id}`);
+      try {
+        await del(`media_${id}`);
+        await del(`media_type_${id}`);
+        if (mediaSrc && mediaSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(mediaSrc);
+        }
+        setMediaSrc(null);
+        setMediaType(null);
+      } catch (err) {
+        console.error("Error deleting media from IndexedDB:", err);
+      }
     }
   };
 
@@ -639,6 +723,7 @@ export default function App() {
                 isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
               )}>
                 <a href="#historia" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Nossa História</a>
+                <a href="#nossos-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Nossos Templos</a>
                 <a href="#falanges" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Falanges do Amanhecer</a>
                 <a href="#povo-cigano" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Povo Cigano</a>
                 <a href="#beneficios" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Benefícios</a>
@@ -675,6 +760,7 @@ export default function App() {
               )}>
                 <a href="#mantras" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Mantras</a>
                 <a href="#musicas-ciganas" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Músicas Ciganas</a>
+                <a href="#videos-destaque" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Vídeos em Destaque</a>
                 <a href="#fotos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Galeria de Fotos</a>
                 <a href="#arquivos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Downloads (Drive)</a>
               </div>
@@ -809,6 +895,7 @@ export default function App() {
                 <p className="text-[10px] text-violet-500 border-b border-violet-500/20 pb-1">Doutrina</p>
                 <div className="flex flex-col gap-3">
                   <a href="#historia" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-violet-500 transition-colors">Nossa História</a>
+                  <a href="#nossos-templos" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-violet-500 transition-colors">Nossos Templos</a>
                   <a href="#falanges" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-violet-500 transition-colors">Falanges</a>
                   <a href="#povo-cigano" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-violet-500 transition-colors">Povo Cigano</a>
                   <a href="#beneficios" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-violet-500 transition-colors">Benefícios</a>
@@ -830,6 +917,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 <a href="#mantras" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Mantras</a>
                 <a href="#musicas-ciganas" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Músicas</a>
+                <a href="#videos-destaque" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Vídeos</a>
                 <a href="#fotos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Galeria</a>
                 <a href="#arquivos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Downloads</a>
                 <a href="#blog" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Blog</a>
@@ -1485,6 +1573,59 @@ export default function App() {
                   )}>{benefit.desc}</p>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Videos Section */}
+        <section id="videos-destaque" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <span className={cn(
+                "inline-block px-4 py-1.5 mb-4 text-[10px] font-bold tracking-[0.2em] uppercase rounded-full",
+                isDarkMode ? "bg-violet-900/50 text-violet-200" : "bg-violet-100 text-violet-800"
+              )}>
+                Conteúdo Audiovisual
+              </span>
+              <h2 className={cn(
+                "text-3xl md:text-5xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>
+                Vídeos em Destaque
+              </h2>
+              <p className={cn(
+                "max-w-2xl mx-auto",
+                isDarkMode ? "text-slate-400" : "text-emerald-700"
+              )}>
+                Explore as instruções em vídeo sobre a Doutrina, os processos de Cura e a Missão do Jaguar.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <VideoPlayer 
+                title="A Doutrina"
+                id="video-doutrina"
+                description="Entenda os fundamentos da Doutrina do Amanhecer e o papel do Doutrinador na Nova Era."
+                isDev={isDev}
+                isDarkMode={isDarkMode}
+              />
+              <VideoPlayer 
+                title="O Processo de Cura"
+                id="video-cura"
+                description="Veja como as energias são manipuladas para promover a cura espiritual e física nos Templos."
+                isDev={isDev}
+                isDarkMode={isDarkMode}
+              />
+              <VideoPlayer 
+                title="A Missão do Jaguar"
+                id="video-missao"
+                description="O chamado de Pai Seta Branca para os Jaguares e a responsabilidade da caridade."
+                isDev={isDev}
+                isDarkMode={isDarkMode}
+              />
             </div>
           </div>
         </section>
@@ -2342,6 +2483,90 @@ export default function App() {
                   </form>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Temples Gallery Section */}
+        <section id="nossos-templos" className={cn(
+          "py-24 scroll-mt-24 transition-colors duration-500",
+          isDarkMode ? "bg-slate-900" : "bg-white"
+        )}>
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className={cn(
+                "text-3xl md:text-5xl font-serif font-bold mb-4",
+                isDarkMode ? "text-white" : "text-blue-900"
+              )}>Nossos Templos</h2>
+              <p className={cn(
+                "max-w-2xl mx-auto text-lg",
+                isDarkMode ? "text-slate-400" : "text-emerald-700"
+              )}>
+                Conheça alguns dos pontos de luz espalhados pelo Brasil, onde a doutrina de Tia Neiva floresce e transforma vidas através da caridade e do amor.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[
+                {
+                  id: "templo-mae",
+                  name: "Templo Mãe",
+                  location: "Planaltina, DF",
+                  desc: "O berço da doutrina de Tia Neiva e centro irradiador de luz.",
+                  img: "https://images.unsplash.com/photo-1548625361-195fe5772d97?auto=format&fit=crop&w=600&h=400&q=80"
+                },
+                {
+                  id: "templo-olinda",
+                  name: "Templo de Olinda",
+                  location: "Olinda, PE",
+                  desc: "Uma das primeiras ramificações, levando a cura ao Nordeste.",
+                  img: "https://images.unsplash.com/photo-1590076175571-4b5459efb599?auto=format&fit=crop&w=600&h=400&q=80"
+                },
+                {
+                  id: "templo-curitiba",
+                  name: "Templo de Curitiba",
+                  location: "Curitiba, PR",
+                  desc: "Ponto de luz e equilíbrio na região Sul do Brasil.",
+                  img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&h=400&q=80"
+                },
+                {
+                  id: "templo-salvador",
+                  name: "Templo de Salvador",
+                  location: "Salvador, BA",
+                  desc: "Irradiando a força dos Orixás e a caridade na Bahia.",
+                  img: "https://images.unsplash.com/photo-1565342403875-07a8dc5ed13c?auto=format&fit=crop&w=600&h=400&q=80"
+                }
+              ].map((temple, idx) => (
+                <motion.div
+                  key={temple.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  viewport={{ once: true }}
+                  className="group"
+                >
+                  <div className="relative aspect-[3/2] rounded-3xl overflow-hidden mb-4 shadow-lg border border-transparent group-hover:border-violet-500 transition-all duration-500">
+                    <EditableImage 
+                      id={`temple-${temple.id}`}
+                      defaultSrc={temple.img}
+                      alt={temple.name}
+                      isDev={isDev}
+                      className="w-full h-full transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
+                      <span className="text-white text-xs font-bold uppercase tracking-widest">{temple.location}</span>
+                    </div>
+                  </div>
+                  <h3 className={cn(
+                    "text-xl font-bold mb-1 transition-colors group-hover:text-violet-500",
+                    isDarkMode ? "text-white" : "text-blue-900"
+                  )}>{temple.name}</h3>
+                  <p className={cn(
+                    "text-sm leading-relaxed",
+                    isDarkMode ? "text-slate-400" : "text-emerald-700"
+                  )}>{temple.desc}</p>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
