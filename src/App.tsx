@@ -2506,35 +2506,51 @@ export default function App() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
               {[
                 {
                   id: "templo-mae",
                   name: "Templo Mãe",
                   location: "Planaltina, DF",
-                  desc: "O berço da doutrina de Tia Neiva e centro irradiador de luz.",
-                  img: "https://images.unsplash.com/photo-1548625361-195fe5772d97?auto=format&fit=crop&w=600&h=400&q=80"
+                  desc: "O berço da doutrina de Tia Neiva e centro irradiador de luz para todo o amanhecer.",
+                  img: "https://images.unsplash.com/photo-1548625361-195fe5772d97?auto=format&fit=crop&w=800&h=500&q=80"
+                },
+                {
+                  id: "templo-pelario",
+                  name: "Templo Pelário do Amanhecer",
+                  location: "Acesse o Facebook",
+                  desc: "Trabalho espiritual e caridade constante. Siga nossas atividades e escalas pelo Facebook.",
+                  img: "https://images.unsplash.com/photo-1590076175571-4b5459efb599?auto=format&fit=crop&w=800&h=500&q=80",
+                  link: "https://www.facebook.com/templopelariodoamanhecer"
+                },
+                {
+                  id: "templo-patario",
+                  name: "Templo Patário do Amanhecer",
+                  location: "Crato, CE",
+                  desc: "Localizado na Área Especial - Av. da Estrela - Vila Lobo, Crato - CE. Um ponto de luz no Ceará.",
+                  img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&h=500&q=80"
+                },
+                {
+                  id: "ry-purado",
+                  name: "RY Purado do Amanhecer",
+                  location: "Linktree",
+                  desc: "Acesse nosso Linktree para informações sobre escalas, mantras e comunicações oficiais.",
+                  img: "https://images.unsplash.com/photo-1565342403875-07a8dc5ed13c?auto=format&fit=crop&w=800&h=500&q=80",
+                  link: "https://linktr.ee/rypuradoamanhecer"
                 },
                 {
                   id: "templo-olinda",
                   name: "Templo de Olinda",
                   location: "Olinda, PE",
-                  desc: "Uma das primeiras ramificações, levando a cura ao Nordeste.",
-                  img: "https://images.unsplash.com/photo-1590076175571-4b5459efb599?auto=format&fit=crop&w=600&h=400&q=80"
-                },
-                {
-                  id: "templo-curitiba",
-                  name: "Templo de Curitiba",
-                  location: "Curitiba, PR",
-                  desc: "Ponto de luz e equilíbrio na região Sul do Brasil.",
-                  img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&h=400&q=80"
+                  desc: "Uma das primeiras ramificações, levando a cura e o conforto espiritual ao Nordeste.",
+                  img: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=800&h=500&q=80"
                 },
                 {
                   id: "templo-salvador",
                   name: "Templo de Salvador",
                   location: "Salvador, BA",
-                  desc: "Irradiando a força dos Orixás e a caridade na Bahia.",
-                  img: "https://images.unsplash.com/photo-1565342403875-07a8dc5ed13c?auto=format&fit=crop&w=600&h=400&q=80"
+                  desc: "Irradiando a força dos Orixás e a caridade constante na capital baiana.",
+                  img: "https://images.unsplash.com/photo-1542332213-31f87348057f?auto=format&fit=crop&w=800&h=500&q=80"
                 }
               ].map((temple, idx) => (
                 <motion.div
@@ -2545,7 +2561,7 @@ export default function App() {
                   viewport={{ once: true }}
                   className="group"
                 >
-                  <div className="relative aspect-[3/2] rounded-3xl overflow-hidden mb-4 shadow-lg border border-transparent group-hover:border-violet-500 transition-all duration-500">
+                  <div className="relative aspect-[16/10] rounded-[2.5rem] overflow-hidden mb-6 shadow-2xl border border-transparent group-hover:border-violet-500 transition-all duration-500">
                     <EditableImage 
                       id={`temple-${temple.id}`}
                       defaultSrc={temple.img}
@@ -2553,20 +2569,44 @@ export default function App() {
                       isDev={isDev}
                       className="w-full h-full transition-transform duration-700 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                      <span className="text-white text-xs font-bold uppercase tracking-widest">{temple.location}</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+                      <span className="text-violet-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">{temple.location}</span>
+                      {temple.link && (
+                        <a 
+                          href={temple.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-white text-sm font-bold hover:text-violet-400 transition-colors"
+                        >
+                          Acessar Site <ArrowRight className="w-4 h-4" />
+                        </a>
+                      )}
                     </div>
                   </div>
                   <h3 className={cn(
-                    "text-xl font-bold mb-1 transition-colors group-hover:text-violet-500",
+                    "text-2xl font-bold mb-2 transition-colors group-hover:text-violet-500",
                     isDarkMode ? "text-white" : "text-blue-900"
                   )}>{temple.name}</h3>
                   <p className={cn(
-                    "text-sm leading-relaxed",
+                    "text-sm leading-relaxed mb-4",
                     isDarkMode ? "text-slate-400" : "text-emerald-700"
                   )}>{temple.desc}</p>
                 </motion.div>
               ))}
+            </div>
+
+            <div className="mt-20 text-center">
+              <a 
+                href="https://valedoamanhecer.net.br/templos.php" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={cn(
+                  "inline-flex items-center gap-3 px-10 py-5 rounded-full font-bold transition-all hover:scale-105 active:scale-95 shadow-xl",
+                  isDarkMode ? "bg-slate-800 text-white hover:bg-slate-700" : "bg-blue-900 text-white hover:bg-blue-800"
+                )}
+              >
+                <LinkIcon className="w-5 h-5" /> Ver Lista Completa de Templos
+              </a>
             </div>
           </div>
         </section>
