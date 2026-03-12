@@ -65,6 +65,13 @@ interface NewsItem {
   date: string;
   category: string;
 }
+
+interface GalleryItem {
+  id: string;
+  type: 'image' | 'video';
+  title: string;
+}
+
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { get, set, del } from 'idb-keyval';
@@ -318,6 +325,7 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
   const [mediaType, setMediaType] = React.useState<'video' | 'audio' | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [uploadSpeed, setUploadSpeed] = React.useState(0);
@@ -328,6 +336,7 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
 
   React.useEffect(() => {
     const loadMedia = async () => {
+      setIsLoading(true);
       try {
         // Try server first
         const serverMappingResponse = await fetch('/api/media');
@@ -337,6 +346,7 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
             setMediaSrc(mapping[id]);
             const isVideo = mapping[id].match(/\.(mp4|webm|ogg)$/i);
             setMediaType(isVideo ? 'video' : 'audio');
+            setIsLoading(false);
             return;
           }
         }
@@ -354,6 +364,8 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
         }
       } catch (err) {
         console.error("Error loading media:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadMedia();
@@ -517,7 +529,12 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
 
   return (
     <div className={cn("relative group w-full h-full", className)}>
-      {mediaSrc ? (
+      {isLoading ? (
+        <div className="w-full h-full bg-blue-900/40 backdrop-blur-sm flex flex-col items-center justify-center">
+          <RefreshCw className="w-10 h-10 text-white animate-spin mb-2" />
+          <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Carregando Mídia...</span>
+        </div>
+      ) : mediaSrc ? (
         mediaType === 'video' ? (
           <video 
             ref={mediaRef as React.RefObject<HTMLVideoElement>}
@@ -862,6 +879,141 @@ const LetterTranscriber: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) =>
   );
 };
 
+const MediaGallerySection: React.FC<{ 
+  isDarkMode: boolean; 
+  isDev: boolean; 
+  items: GalleryItem[]; 
+  onAdd: (type: 'image' | 'video') => void;
+  onDelete: (id: string) => void;
+}> = ({ isDarkMode, isDev, items, onAdd, onDelete }) => {
+  const [activeTab, setActiveTab] = React.useState<'all' | 'image' | 'video'>('all');
+  
+  const filteredItems = items.filter(item => activeTab === 'all' || item.type === activeTab);
+
+  return (
+    <section id="galeria" className={cn(
+      "py-24 scroll-mt-24 transition-colors duration-500",
+      isDarkMode ? "bg-slate-900" : "bg-white"
+    )}>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
+          <div className="text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
+              <div className="p-2 bg-violet-500 rounded-xl text-white">
+                <ImageIcon className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-[0.3em] text-violet-500">Acervo Visual</span>
+            </div>
+            <h2 className={cn(
+              "text-3xl md:text-4xl font-serif font-bold",
+              isDarkMode ? "text-white" : "text-blue-900"
+            )}>
+              Galeria de Mídia
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+            {(['all', 'image', 'video'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                  activeTab === tab 
+                    ? "bg-white dark:bg-slate-700 text-violet-500 shadow-md" 
+                    : "text-slate-500 hover:text-violet-400"
+                )}
+              >
+                {tab === 'all' ? 'Tudo' : tab === 'image' ? 'Fotos' : 'Vídeos'}
+              </button>
+            ))}
+          </div>
+          
+          {isDev && (
+            <div className="flex gap-2">
+              <button 
+                onClick={() => onAdd('image')}
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Plus className="w-5 h-5" /> Foto
+              </button>
+              <button 
+                onClick={() => onAdd('video')}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Plus className="w-5 h-5" /> Vídeo
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredItems.map((item) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className={cn(
+                "group relative rounded-[2rem] overflow-hidden border-4 transition-all hover:shadow-2xl",
+                isDarkMode ? "bg-slate-950 border-slate-800" : "bg-white border-white shadow-xl"
+              )}
+            >
+              <div className="aspect-square relative">
+                {item.type === 'image' ? (
+                  <EditableImage 
+                    id={item.id}
+                    isDev={isDev}
+                    defaultSrc={`https://picsum.photos/seed/${item.id}/800/800`}
+                    alt={item.title}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <EditableMedia 
+                    id={item.id}
+                    isDev={isDev}
+                    className="w-full h-full"
+                  />
+                )}
+                
+                {/* Overlay Info */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <p className="text-white font-bold text-sm mb-1">{item.title}</p>
+                  <span className="text-[10px] text-white/60 uppercase tracking-widest font-bold">
+                    {item.type === 'image' ? 'Fotografia' : 'Vídeo Aula'}
+                  </span>
+                </div>
+
+                {isDev && (
+                  <button 
+                    onClick={() => onDelete(item.id)}
+                    className="absolute top-4 right-4 p-2 bg-rose-600 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow-lg z-30"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {filteredItems.length === 0 && (
+          <div className="py-20 text-center">
+            <div className="inline-flex p-6 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 mb-4">
+              <ImageIcon className="w-12 h-12" />
+            </div>
+            <p className={cn(
+              "text-lg font-medium",
+              isDarkMode ? "text-slate-500" : "text-slate-400"
+            )}>Nenhum item encontrado nesta categoria.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
 const DonationSection: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   const pixKey = "jesuscristopaisetabranca@gmail.com";
   
@@ -1052,6 +1204,33 @@ const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ is
   );
 };
 
+const NewsSchema: React.FC<{ news: NewsItem[] }> = ({ news }) => {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": news.map((item, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "Article",
+        "headline": item.title,
+        "description": item.content.substring(0, 150),
+        "datePublished": item.date,
+        "author": {
+          "@type": "Organization",
+          "name": "Vale do Amanhecer"
+        }
+      }
+    }))
+  };
+
+  return (
+    <script type="application/ld+json">
+      {JSON.stringify(schema)}
+    </script>
+  );
+};
+
 const NoticiasSection: React.FC<{ 
   isDarkMode: boolean; 
   isDev: boolean; 
@@ -1064,6 +1243,7 @@ const NoticiasSection: React.FC<{
       "py-24 scroll-mt-24 transition-colors duration-500",
       isDarkMode ? "bg-slate-900" : "bg-blue-50/30"
     )}>
+      <NewsSchema news={news} />
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
           <div className="text-center md:text-left">
@@ -1152,7 +1332,103 @@ const NoticiasSection: React.FC<{
   );
 };
 
+const useSEO = (isDarkMode: boolean) => {
+  React.useEffect(() => {
+    const sections = document.querySelectorAll('section[id]');
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -70% 0px',
+      threshold: 0
+    };
+
+    const sectionMeta: Record<string, { title: string; description: string }> = {
+      'doutrina': {
+        title: 'Doutrina do Amanhecer: Fundamentos e Missão',
+        description: 'Conheça os pilares da Doutrina do Amanhecer, baseada no amor, humildade e tolerância para a cura espiritual.'
+      },
+      'historia': {
+        title: 'História do Vale do Amanhecer: Tia Neiva e Pai Seta Branca',
+        description: 'A trajetória de Tia Neiva e a fundação do Vale do Amanhecer por Pai Seta Branca. Uma jornada de fé e espiritualidade.'
+      },
+      'nossos-templos': {
+        title: 'Templos do Amanhecer: Onde Encontrar Cura',
+        description: 'Localize os Templos do Amanhecer e saiba onde encontrar auxílio espiritual e cura através da nossa doutrina.'
+      },
+      'falanges': {
+        title: 'Falanges do Amanhecer: Organização Espiritual',
+        description: 'Conheça as Falanges Missionárias e como os médiuns se organizam para servir na caridade sagrada.'
+      },
+      'desenvolvimento': {
+        title: 'Desenvolvimento Mediúnico: A Jornada do Jaguar',
+        description: 'Saiba como ingressar na Doutrina do Amanhecer e trilhar o caminho do desenvolvimento mediúnico como Jaguar.'
+      },
+      'noticias': {
+        title: 'Notícias do Vale: Atualizações e Comunicados',
+        description: 'Fique por dentro das últimas notícias, eventos e comunicados oficiais do Vale do Amanhecer.'
+      },
+      'doacao': {
+        title: 'Apoie o Portal do Amanhecer: Caridade e Luz',
+        description: 'Sua doação ajuda a manter este portal de luz ativo, servindo a todos os médiuns e jaguares da Nova Era.'
+      }
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          if (sectionMeta[id]) {
+            document.title = `${sectionMeta[id].title} - Portal do Amanhecer`;
+            const metaDesc = document.querySelector('meta[name="description"]');
+            if (metaDesc) {
+              metaDesc.setAttribute('content', sectionMeta[id].description);
+            }
+          }
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach(section => observer.observe(section));
+
+    return () => observer.disconnect();
+  }, []);
+};
+
+const EventSchema: React.FC<{ events: any[] }> = ({ events }) => {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": events.map((event, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "Event",
+        "name": event.title,
+        "description": event.desc,
+        "startDate": `2026-${event.month === 'JAN' ? '01' : event.month === 'MAI' ? '05' : event.month === 'OUT' ? '10' : event.month === 'NOV' ? '11' : '12'}-${event.date}`,
+        "location": {
+          "@type": "Place",
+          "name": "Templo Mãe - Vale do Amanhecer",
+          "address": "Planaltina, DF"
+        }
+      }
+    }))
+  };
+
+  return (
+    <script type="application/ld+json">
+      {JSON.stringify(schema)}
+    </script>
+  );
+};
+
 export default function App() {
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isDarkMode') === 'true';
+    }
+    return false;
+  });
+  useSEO(isDarkMode);
   const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [showShareOptions, setShowShareOptions] = React.useState(false);
@@ -1164,12 +1440,6 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [acervoPassword, setAcervoPassword] = React.useState('');
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('isDarkMode') === 'true';
-    }
-    return false;
-  });
   const [isDev, setIsDev] = React.useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('isDev') === 'true';
@@ -1182,9 +1452,10 @@ export default function App() {
   const [news, setNews] = React.useState<NewsItem[]>([]);
   const [isNewsModalOpen, setIsNewsModalOpen] = React.useState(false);
   const [newNews, setNewNews] = React.useState({ title: '', content: '', category: 'Comunicado' });
+  const [galleryItems, setGalleryItems] = React.useState<GalleryItem[]>([]);
 
   React.useEffect(() => {
-    const loadNews = async () => {
+    const loadData = async () => {
       const savedNews = await get('vale_news');
       if (savedNews) {
         setNews(savedNews);
@@ -1208,8 +1479,22 @@ export default function App() {
         setNews(defaultNews);
         await set('vale_news', defaultNews);
       }
+
+      const savedGallery = await get('vale_gallery');
+      if (savedGallery) {
+        setGalleryItems(savedGallery);
+      } else {
+        const defaultGallery: GalleryItem[] = [
+          { id: 'gal-1', type: 'image', title: 'Templo Mãe' },
+          { id: 'gal-2', type: 'image', title: 'Estrela Candente' },
+          { id: 'gal-3', type: 'video', title: 'Ritual de Cura' },
+          { id: 'gal-4', type: 'image', title: 'Jaguar em Oração' }
+        ];
+        setGalleryItems(defaultGallery);
+        await set('vale_gallery', defaultGallery);
+      }
     };
-    loadNews();
+    loadData();
   }, []);
 
   const handleAddNews = async (e: React.FormEvent) => {
@@ -1234,6 +1519,32 @@ export default function App() {
       const updatedNews = news.filter(item => item.id !== id);
       setNews(updatedNews);
       await set('vale_news', updatedNews);
+    }
+  };
+
+  const handleAddGalleryItem = async (type: 'image' | 'video') => {
+    const title = prompt(`Digite o título para o novo ${type === 'image' ? 'foto' : 'vídeo'}:`);
+    if (title) {
+      const newItem: GalleryItem = {
+        id: `gal-${Date.now()}`,
+        type,
+        title
+      };
+      const updatedGallery = [...galleryItems, newItem];
+      setGalleryItems(updatedGallery);
+      await set('vale_gallery', updatedGallery);
+    }
+  };
+
+  const handleDeleteGalleryItem = async (id: string) => {
+    if (confirm('Deseja realmente excluir este item da galeria?')) {
+      const updatedGallery = galleryItems.filter(item => item.id !== id);
+      setGalleryItems(updatedGallery);
+      await set('vale_gallery', updatedGallery);
+      // Also clean up from IDB
+      await del(`img_${id}`);
+      await del(`media_${id}`);
+      await del(`media_type_${id}`);
     }
   };
 
@@ -1481,7 +1792,7 @@ export default function App() {
                 <a href="#mantras" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Mantras</a>
                 <a href="#musicas-ciganas" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Músicas Ciganas</a>
                 <a href="#videos-destaque" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Vídeos em Destaque</a>
-                <a href="#fotos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Galeria de Fotos</a>
+                <a href="#galeria" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Galeria de Mídia</a>
                 <a href="#relacao-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Relação de Templos</a>
                 <a href="#calendario" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Calendário de Eventos</a>
                 <a href="#arquivos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Downloads (Drive)</a>
@@ -1648,7 +1959,7 @@ export default function App() {
                 <a href="#mantras" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Mantras</a>
                 <a href="#musicas-ciganas" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Músicas</a>
                 <a href="#videos-destaque" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Vídeos</a>
-                <a href="#fotos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Galeria</a>
+                <a href="#galeria" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Galeria</a>
                 <a href="#relacao-templos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Relação</a>
                 <a href="#calendario" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Calendário</a>
                 <a href="#arquivos" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Downloads</a>
@@ -2758,38 +3069,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* Fotos Section */}
-        <section id="fotos" className={cn(
-          "py-24 scroll-mt-24 transition-colors duration-500",
-          isDarkMode ? "bg-slate-950" : "bg-pink-50"
-        )}>
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className={cn(
-                "text-3xl md:text-4xl font-serif font-bold mb-4",
-                isDarkMode ? "text-white" : "text-blue-900"
-              )}>Galeria de Fotos</h2>
-              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>Momentos sagrados e a beleza da nossa Doutrina.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className={cn(
-                  "aspect-square rounded-2xl overflow-hidden shadow-md hover:scale-105 transition-transform cursor-pointer",
-                  isDarkMode ? "border-2 border-slate-800" : ""
-                )}>
-                  <EditableImage 
-                    id={`gallery-${i}`}
-                    isDev={isDev}
-                    defaultSrc={`https://picsum.photos/seed/vale${i}/400/400`} 
-                    alt={`Foto ${i}`} 
-                    className="w-full h-full"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Downloads Section */}
         <section id="arquivos" className={cn(
           "py-24 scroll-mt-24 transition-colors duration-500",
@@ -3578,6 +3857,13 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               {/* Upcoming Events List */}
               <div className="lg:col-span-2 space-y-6">
+                <EventSchema events={[
+                  { date: "01", month: "MAI", title: "Dia do Doutrinador", type: "Celebração", desc: "Grande festa em homenagem aos Doutrinadores de todo o mundo no Templo Mãe." },
+                  { date: "30", month: "OUT", title: "Aniversário de Tia Neiva", type: "Homenagem", desc: "Celebração da vida e obra da nossa Clarividente Neiva Zelaya." },
+                  { date: "09", month: "NOV", title: "Dia do Jaguar", type: "Celebração", desc: "Data dedicada a todos os médiuns jaguares que cumprem sua missão na Terra." },
+                  { date: "25", month: "DEZ", title: "Natal do Amanhecer", type: "Celebração", desc: "Trabalhos especiais de Natal com irradiação de amor e paz universal." },
+                  { date: "01", month: "JAN", title: "Ano Novo Espiritual", type: "Celebração", desc: "Abertura do ciclo anual com bênçãos de Pai Seta Branca." },
+                ]} />
                 {[
                   { date: "01", month: "MAI", title: "Dia do Doutrinador", type: "Celebração", desc: "Grande festa em homenagem aos Doutrinadores de todo o mundo no Templo Mãe." },
                   { date: "30", month: "OUT", title: "Aniversário de Tia Neiva", type: "Homenagem", desc: "Celebração da vida e obra da nossa Clarividente Neiva Zelaya." },
@@ -3879,6 +4165,14 @@ export default function App() {
         </div>
       )}
 
+      <MediaGallerySection 
+        isDarkMode={isDarkMode} 
+        isDev={isDev} 
+        items={galleryItems}
+        onAdd={handleAddGalleryItem}
+        onDelete={handleDeleteGalleryItem}
+      />
+
       <DonationSection isDarkMode={isDarkMode} />
 
       <footer className={cn(
@@ -3966,6 +4260,7 @@ export default function App() {
             <a href="#arquivos" className="hover:text-violet-500 transition-colors">Downloads</a>
             <a href="#noticias" className="hover:text-violet-500 transition-colors">Notícias</a>
             <a href="#blog" className="hover:text-violet-500 transition-colors">Blog</a>
+            <a href="#galeria" className="hover:text-violet-500 transition-colors">Galeria</a>
             <a href="#doacao" className="text-rose-500 hover:text-rose-600 transition-colors flex items-center gap-1">
               <Heart className="w-3 h-3 fill-current" /> Doação
             </a>
