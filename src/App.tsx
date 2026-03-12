@@ -247,12 +247,14 @@ const EditableImage: React.FC<EditableImageProps> = ({ id, defaultSrc, alt, clas
       setAiError(null);
       setIsUploading(true);
       try {
-        // 1. AI Verification
-        const verification = await verifyImageWithAI(file);
-        if (!verification.allowed) {
-          setAiError(verification.reason || "Conteúdo não permitido pela doutrina.");
-          setIsUploading(false);
-          return;
+        // 1. AI Verification - Bypass if admin
+        if (!isDev) {
+          const verification = await verifyImageWithAI(file);
+          if (!verification.allowed) {
+            setAiError(verification.reason || "Conteúdo não permitido pela doutrina.");
+            setIsUploading(false);
+            return;
+          }
         }
 
         // 2. Save to server
@@ -515,15 +517,17 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
     setIsUploading(true);
     
     try {
-      // 1. AI Verification
-      setIsVerifying(true);
-      const verification = await verifyMediaWithAI(file);
-      setIsVerifying(false);
-      
-      if (!verification.allowed) {
-        setError(verification.reason || "Arquivo rejeitado pela segurança da IA.");
-        setIsUploading(false);
-        return;
+      // 1. AI Verification - Bypass if admin
+      if (!isDev) {
+        setIsVerifying(true);
+        const verification = await verifyMediaWithAI(file);
+        setIsVerifying(false);
+        
+        if (!verification.allowed) {
+          setError(verification.reason || "Arquivo rejeitado pela segurança da IA.");
+          setIsUploading(false);
+          return;
+        }
       }
 
       // 2. Upload with progress
@@ -1543,6 +1547,8 @@ export default function App() {
   const [loginData, setLoginData] = React.useState({ email: '', password: '' });
   const [showBackToTop, setShowBackToTop] = React.useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = React.useState(false);
+  const [logoClickCount, setLogoClickCount] = React.useState(0);
+  const [logoClickTimer, setLogoClickTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [news, setNews] = React.useState<NewsItem[]>([]);
   const [isNewsModalOpen, setIsNewsModalOpen] = React.useState(false);
   const [newNews, setNewNews] = React.useState({ title: '', content: '', category: 'Comunicado' });
@@ -1692,6 +1698,10 @@ export default function App() {
     const newState = !isDev;
     setIsDev(newState);
     localStorage.setItem('isDev', String(newState));
+    if (!newState) {
+      setIsLoggedIn(false);
+    }
+    alert(`Modo Desenvolvedor ${newState ? 'Ativado' : 'Desativado'}`);
   };
 
   const resetAllImages = async () => {
@@ -1782,6 +1792,28 @@ export default function App() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleLogoClick = () => {
+    // Reset timer if exists
+    if (logoClickTimer) clearTimeout(logoClickTimer);
+
+    const newCount = logoClickCount + 1;
+    setLogoClickCount(newCount);
+
+    if (newCount === 3) {
+      setIsLoginModalOpen(true);
+      setLogoClickCount(0);
+    } else {
+      // Reset count after 2 seconds of inactivity
+      const timer = setTimeout(() => {
+        setLogoClickCount(0);
+      }, 2000);
+      setLogoClickTimer(timer);
+    }
+
+    // Scroll to top as well
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareTitle = "O Segredo da Cura que Tia Neiva Revelou";
 
@@ -1828,7 +1860,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           {/* Logo Section */}
           <div 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={handleLogoClick}
             className="flex items-center gap-4 group cursor-pointer"
           >
             <div className="relative w-12 h-12 flex items-center justify-center">
@@ -1987,23 +2019,27 @@ export default function App() {
               <Download className="w-4 h-4" /> Downloads
             </a>
 
-            <button 
-              onClick={() => setIsAdminPanelOpen(true)}
-              className={cn(
-                "hidden sm:flex p-2.5 rounded-xl transition-all hover:scale-110 flex items-center justify-center",
-                isDarkMode ? "bg-slate-800 text-slate-400 border border-slate-700" : "bg-slate-100 text-slate-600 border border-slate-200"
-              )}
-              title="Painel de Controle"
-            >
-              <Lock className="w-4 h-4" />
-            </button>
+            {isLoggedIn && (
+              <button 
+                onClick={() => setIsAdminPanelOpen(true)}
+                className={cn(
+                  "hidden sm:flex p-2.5 rounded-xl transition-all hover:scale-110 flex items-center justify-center",
+                  isDarkMode ? "bg-slate-800 text-slate-400 border border-slate-700" : "bg-slate-100 text-slate-600 border border-slate-200"
+                )}
+                title="Painel de Controle"
+              >
+                <Lock className="w-4 h-4" />
+              </button>
+            )}
 
-            <button 
-              onClick={() => setIsLoginModalOpen(true)}
-              className="hidden sm:flex px-6 py-2.5 bg-blue-900 text-white text-[11px] font-bold rounded-xl hover:bg-blue-800 transition-all items-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95"
-            >
-              <User className="w-4 h-4" /> Entrar
-            </button>
+            {isLoggedIn && (
+              <button 
+                onClick={() => setIsLoginModalOpen(true)}
+                className="hidden sm:flex px-6 py-2.5 bg-blue-900 text-white text-[11px] font-bold rounded-xl hover:bg-blue-800 transition-all items-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95"
+              >
+                <User className="w-4 h-4" /> Entrar
+              </button>
+            )}
 
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -2094,19 +2130,21 @@ export default function App() {
             </div>
 
             <div className="pt-6 border-t border-slate-500/10 flex flex-col gap-4">
-              <button 
-                onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
-                className="w-full py-4 bg-blue-900 text-white rounded-2xl font-bold shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2"
-              >
-                <User className="w-4 h-4" /> Entrar no Portal
-              </button>
               {isLoggedIn && (
-                <button 
-                  onClick={() => { setIsAdminPanelOpen(true); setIsMobileMenuOpen(false); }}
-                  className="w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2"
-                >
-                  <Lock className="w-4 h-4" /> Painel do Mestre
-                </button>
+                <>
+                  <button 
+                    onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
+                    className="w-full py-4 bg-blue-900 text-white rounded-2xl font-bold shadow-xl shadow-blue-900/20 flex items-center justify-center gap-2"
+                  >
+                    <User className="w-4 h-4" /> Entrar no Portal
+                  </button>
+                  <button 
+                    onClick={() => { setIsAdminPanelOpen(true); setIsMobileMenuOpen(false); }}
+                    className="w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-4 h-4" /> Painel do Mestre
+                  </button>
+                </>
               )}
               <div className="flex items-center justify-center gap-6">
                 <a href="https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-110">
