@@ -1141,25 +1141,21 @@ const DonationSection: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
             "Fora da caridade não há salvação." Este portal é mantido de forma independente para servir à nossa Doutrina. Sua contribuição ajuda a pagar os custos de servidor e IA, garantindo que a luz continue brilhando para todos os jaguares.
           </p>
 
-          <div className={cn(
-            "p-8 rounded-3xl border-2 border-dashed mb-8 transition-all group hover:border-violet-500",
-            isDarkMode ? "bg-slate-950 border-slate-800" : "bg-pink-50/50 border-pink-100"
-          )}>
-            <div className="flex flex-col items-center gap-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-violet-500">Chave PIX (E-mail)</span>
-              <div className={cn(
-                "text-xl md:text-2xl font-mono font-bold break-all px-4 py-2 rounded-xl",
-                isDarkMode ? "text-white bg-slate-900" : "text-blue-900 bg-white"
-              )}>
-                {pixKey}
-              </div>
-              <button 
-                onClick={copyPix}
-                className="flex items-center gap-2 px-8 py-3 bg-violet-500 hover:bg-violet-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
-              >
-                <LinkIcon className="w-5 h-5" /> Copiar Chave PIX
-              </button>
-            </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a 
+              href="https://tipa.ai/jesuscristopaisetabranca"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold transition-all shadow-xl hover:scale-105 active:scale-95 text-lg"
+            >
+              <Heart className="w-5 h-5 fill-current" /> Doar via Tipa.ai
+            </a>
+            <button 
+              onClick={copyPix}
+              className="flex items-center gap-2 px-8 py-4 bg-violet-500 hover:bg-violet-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:scale-105 active:scale-95 text-lg"
+            >
+              <LinkIcon className="w-5 h-5" /> Copiar Chave PIX
+            </button>
           </div>
 
           <div className="flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest text-emerald-600">
@@ -1970,7 +1966,7 @@ export default function App() {
               Contato
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
-            <a href="#doacao" className="px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2 ml-2">
+            <a href="https://tipa.ai/jesuscristopaisetabranca" target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2 ml-2">
               <Heart className="w-3 h-3 fill-current" /> Doação
             </a>
           </div>
@@ -2123,7 +2119,7 @@ export default function App() {
                 <a href="#assistente-ia" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">IA</a>
                 <a href="#perolas" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Pérolas</a>
                 <a href="#contato" onClick={() => setIsMobileMenuOpen(false)} className="py-2 hover:text-violet-500 transition-colors">Contato</a>
-                <a href="#doacao" onClick={() => setIsMobileMenuOpen(false)} className="py-2 text-rose-500 font-bold flex items-center gap-2">
+                <a href="https://tipa.ai/jesuscristopaisetabranca" target="_blank" rel="noopener noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="py-2 text-rose-500 font-bold flex items-center gap-2">
                   <Heart className="w-4 h-4 fill-current" /> Doação
                 </a>
               </div>
@@ -2311,7 +2307,9 @@ export default function App() {
                 </button>
 
                 <a 
-                  href="#doacao"
+                  href="https://tipa.ai/jesuscristopaisetabranca"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-10 py-5 bg-rose-500 hover:bg-rose-600 text-white text-xl font-bold rounded-full shadow-lg transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Heart className="w-5 h-5 fill-current" /> Doar Agora
@@ -3335,7 +3333,9 @@ export default function App() {
                 A tecnologia que move este portal e nossa IA tem custos. Ajude-nos a manter esta luz acesa para todos os jaguares.
               </p>
               <a 
-                href="#doacao"
+                href="https://tipa.ai/jesuscristopaisetabranca"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
               >
                 <Heart className="w-4 h-4 fill-current" /> Apoiar o Portal
@@ -3459,7 +3459,9 @@ export default function App() {
 
         <div className="py-12 text-center">
           <a 
-            href="#doacao"
+            href="https://tipa.ai/jesuscristopaisetabranca"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-3 px-10 py-4 bg-rose-500/10 text-rose-500 border-2 border-rose-500/20 rounded-full font-bold hover:bg-rose-500 hover:text-white transition-all shadow-lg active:scale-95"
           >
             <HeartHandshake className="w-5 h-5" /> Apoie a Manutenção do Portal
@@ -4441,7 +4443,7 @@ export default function App() {
             <a href="#noticias" className="hover:text-violet-500 transition-colors">Notícias</a>
             <a href="#blog" className="hover:text-violet-500 transition-colors">Blog</a>
             <a href="#galeria" className="hover:text-violet-500 transition-colors">Galeria</a>
-            <a href="#doacao" className="text-rose-500 hover:text-rose-600 transition-colors flex items-center gap-1">
+            <a href="https://tipa.ai/jesuscristopaisetabranca" target="_blank" rel="noopener noreferrer" className="text-rose-500 hover:text-rose-600 transition-colors flex items-center gap-1">
               <Heart className="w-3 h-3 fill-current" /> Doação
             </a>
           </div>
@@ -4626,7 +4628,9 @@ export default function App() {
       {/* Admin & Navigation Floating Buttons */}
       <div className="fixed bottom-8 right-8 z-[60] flex flex-col gap-4">
         <motion.a
-          href="#doacao"
+          href="https://tipa.ai/jesuscristopaisetabranca"
+          target="_blank"
+          rel="noopener noreferrer"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}
