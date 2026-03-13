@@ -45,7 +45,7 @@ async function startServer() {
   const upload = multer({ 
     storage,
     limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB limit for images/media
+      fileSize: 300 * 1024 * 1024, // 300MB limit for images/media
     },
     fileFilter: (req, file, cb) => {
       const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm', '.mp3', '.wav'];
