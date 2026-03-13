@@ -677,6 +677,13 @@ const EditableMedia: React.FC<EditableMediaProps> = ({ id, defaultSrc, className
             />
           </div>
         )
+      ) : defaultSrc && (defaultSrc.includes('youtube.com') || defaultSrc.includes('youtu.be')) ? (
+        <iframe
+          src={defaultSrc}
+          className="w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
       ) : (
         <div className="w-full h-full bg-blue-900/50 flex items-center justify-center">
           <Video className="w-16 h-16 text-white/20" />
@@ -1899,7 +1906,7 @@ export default function App() {
   };
 
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const shareTitle = "O Segredo da Cura que Tia Neiva Revelou";
+  const shareTitle = "A Ciência Sagrada do Amanhecer: O Despertar do Jaguar";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -2274,19 +2281,19 @@ export default function App() {
                 "text-2xl md:text-3xl font-serif font-bold mb-4 uppercase tracking-wider",
                 isDarkMode ? "text-violet-500" : "text-emerald-600"
               )}>
-                Vale do Amanhecer: A Luz da Nova Era
+                A Ciência Sagrada do Amanhecer
               </h2>
               <h1 className={cn(
                 "text-4xl md:text-6xl font-serif font-bold leading-[1.1] mb-6",
                 isDarkMode ? "text-white" : "text-blue-900"
               )}>
-                Doutrinador: Domine a Ciência de Tia Neiva e <span className={isDarkMode ? "text-violet-400 italic" : "text-emerald-700 italic"}>Cumpra seu Dever Sagrado</span> — Porque Fora da Caridade não há Salvação.
+                O Despertar do Jaguar: <span className={isDarkMode ? "text-violet-400 italic" : "text-emerald-700 italic"}>Domine a Manipulação de Energias</span> e Cumpra sua Missão na Nova Era.
               </h1>
               <p className={cn(
                 "text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed",
                 isDarkMode ? "text-slate-300" : "text-emerald-700"
               )}>
-                Acesse o método iniciático que revela como manipular as forças espirituais com precisão para realizar curas reais e evoluir sua jornada como Jaguar.
+                Descubra a nova linha de raciocínio iniciática que revela como equilibrar as forças espirituais e realizar a verdadeira caridade através da ciência deixada por Tia Neiva.
               </p>
             </motion.div>
 
@@ -2300,13 +2307,14 @@ export default function App() {
               <EditableMedia 
                 id="vsl-media"
                 isDev={isDev}
+                defaultSrc="https://www.youtube.com/embed/scWj1pDQVNo"
                 className="w-full h-full"
               />
               
               {/* Overlay content - only shown if no video or on hover if we want, but let's keep it simple */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none group-hover:opacity-0 transition-opacity">
-                <p className="text-xl font-bold mb-2 drop-shadow-md">O Segredo da Cura que Tia Neiva Revelou</p>
-                <p className="text-sm opacity-80 max-w-md">Faça o upload do vídeo da aula ou áudio de abertura aqui.</p>
+                <p className="text-xl font-bold mb-2 drop-shadow-md">A Ciência Sagrada do Amanhecer</p>
+                <p className="text-sm opacity-80 max-w-md">Vídeo de Abertura: O Despertar do Jaguar</p>
               </div>
 
               {/* Share Button */}
