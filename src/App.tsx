@@ -78,6 +78,7 @@ interface SiteConfig {
   youtubeChannel: string;
   tipaUrl: string;
   pixKey: string;
+  masterKey: string;
 }
 
 interface GalleryItem {
@@ -110,7 +111,14 @@ interface EditableTextProps {
   tagName?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'span' | 'div';
 }
 
-const EditableText: React.FC<EditableTextProps> = ({ id, defaultText, className, isDev, tagName: Tag = 'p' }) => {
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Admin from './components/Admin';
+import Login from './components/Login';
+import { db, storage } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+const EditableText: React.FC<EditableTextProps> = ({ id, defaultText, className, isDev, tagName: Tag = 'span' }) => {
   const [text, setText] = React.useState(defaultText);
   const [isEditing, setIsEditing] = React.useState(false);
   const [tempText, setTempText] = React.useState(defaultText);
@@ -118,23 +126,14 @@ const EditableText: React.FC<EditableTextProps> = ({ id, defaultText, className,
   React.useEffect(() => {
     const loadText = async () => {
       try {
-        // Try server first
-        const response = await fetch(`/api/content/text_${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setText(data);
-          setTempText(data);
-          return;
+        const docRef = doc(db, 'content', `text_${id}`);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setText(docSnap.data().value);
+          setTempText(docSnap.data().value);
         }
       } catch (err) {
-        console.error("Error loading text from server:", err);
-      }
-
-      // Fallback to IndexedDB
-      const storedText = await get(`text_${id}`);
-      if (storedText) {
-        setText(storedText);
-        setTempText(storedText);
+        console.error("Error loading text from Firebase:", err);
       }
     };
     loadText();
@@ -143,17 +142,14 @@ const EditableText: React.FC<EditableTextProps> = ({ id, defaultText, className,
   const handleSave = async () => {
     setText(tempText);
     try {
-      // Save to server
-      await fetch(`/api/content/text_${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: tempText })
-      });
+      await setDoc(doc(db, 'content', `text_${id}`), {
+        value: tempText,
+        type: 'text',
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch (err) {
-      console.error("Error saving text to server:", err);
+      console.error("Error saving text to Firebase:", err);
     }
-    // Always save to IndexedDB as backup
-    await set(`text_${id}`, tempText);
     setIsEditing(false);
   };
 
@@ -202,157 +198,48 @@ const EditableImage: React.FC<EditableImageProps> = ({ id, defaultSrc, alt, clas
   const [src, setSrc] = React.useState<string>(defaultSrc);
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [uploadSpeed, setUploadSpeed] = React.useState(0);
-  const [uploadedBytes, setUploadedBytes] = React.useState(0);
-  const [totalBytes, setTotalBytes] = React.useState(0);
-  const [timeRemaining, setTimeRemaining] = React.useState<number | null>(null);
   const [aiError, setAiError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const loadImage = async () => {
       try {
-        // Try server first
-        const serverMappingResponse = await fetch('/api/media');
-        if (serverMappingResponse.ok) {
-          const mapping = await serverMappingResponse.json();
-          if (mapping[id]) {
-            setSrc(mapping[id]);
-            return;
-          }
-        }
-
-        // Fallback to IndexedDB
-        const storedImg = await get(`img_${id}`);
-        if (typeof Blob !== 'undefined' && storedImg instanceof Blob) {
-          setSrc(URL.createObjectURL(storedImg));
-        } else if (typeof storedImg === 'string') {
-          setSrc(storedImg);
+        const docRef = doc(db, 'content', `img_${id}`);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSrc(docSnap.data().value);
         }
       } catch (err) {
-        console.error("Error loading image:", err);
+        console.error("Error loading image from Firebase:", err);
       }
     };
     loadImage();
-
-    return () => {
-      if (src && src.startsWith('blob:')) {
-        URL.revokeObjectURL(src);
-      }
-    };
   }, [id]);
-
-  const verifyImageWithAI = async (file: File): Promise<{ allowed: boolean; reason?: string }> => {
-    if (!isDev) return { allowed: true };
-
-    try {
-      const { GoogleGenAI } = await import("@google/genai");
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("API Key missing");
-      
-      const ai = new GoogleGenAI({ apiKey });
-      
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-
-      const prompt = `Analise esta imagem para um portal do Vale do Amanhecer. 
-      A imagem deve ser relacionada à Doutrina do Vale do Amanhecer (Tia Neiva, Pai Seta Branca, templos, rituais, símbolos sagrados, jaguares, ninfas, paisagens serenas, ou temas espirituais compatíveis).
-      REJEITE terminantemente: pornografia, violência, ódio, propaganda política, memes ofensivos ou qualquer conteúdo que possa "infectar" visualmente a harmonia do portal.
-      Responda estritamente em JSON: {"allowed": boolean, "reason": "explicação curta em português"}`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { inlineData: { data: base64, mimeType: file.type } },
-            { text: prompt }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-
-      const text = response.text || '{"allowed": false, "reason": "Erro na resposta da IA"}';
-      return JSON.parse(text);
-    } catch (err) {
-      console.error("AI Verification Error:", err);
-      return { allowed: true }; // Default to allow if AI fails to avoid blocking admin
-    }
-  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setAiError(null);
       setUploadProgress(0);
-      setUploadSpeed(0);
       setIsUploading(true);
       try {
-        // 1. AI Verification - Only for admin curation
-        if (isDev) {
-          const verification = await verifyImageWithAI(file);
-          if (!verification.allowed) {
-            setAiError(verification.reason || "Conteúdo não permitido pela doutrina.");
-            setIsUploading(false);
-            return;
-          }
-        }
-
-        // 2. Save to server with progress
-        const formData = new FormData();
-        formData.append('id', id);
-        formData.append('file', file);
+        const storageRef = ref(storage, `images/${id}_${Date.now()}`);
+        const uploadTask = uploadBytes(storageRef, file);
         
-        const xhr = new XMLHttpRequest();
-        let startTime = Date.now();
-
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percent);
-            setUploadedBytes(event.loaded);
-            setTotalBytes(event.total);
-            
-            const currentTime = Date.now();
-            const duration = (currentTime - startTime) / 1000; // seconds
-            if (duration > 0) {
-              const speed = event.loaded / duration; // Bytes/s
-              setUploadSpeed(speed / 1024); // KB/s
-              
-              const remainingBytes = event.total - event.loaded;
-              const remainingTime = remainingBytes / speed;
-              setTimeRemaining(remainingTime);
-            }
-          }
-        });
-
-        const uploadPromise = new Promise<{ url: string }>((resolve, reject) => {
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              reject(new Error(`Upload falhou com status ${xhr.status}`));
-            }
-          };
-          xhr.onerror = () => reject(new Error('Erro de rede durante o envio'));
-        });
-
-        xhr.open('POST', '/api/upload');
-        xhr.send(formData);
-
-        const data = await uploadPromise;
-        setSrc(data.url);
+        // Note: Simple uploadBytes doesn't give progress easily without uploadBytesResumable
+        // but for simplicity we'll just wait
+        await uploadTask;
+        const url = await getDownloadURL(storageRef);
+        
+        setSrc(url);
+        await setDoc(doc(db, 'content', `img_${id}`), {
+          value: url,
+          type: 'image',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
 
       } catch (err) {
         console.error("Error saving image:", err);
-        // Fallback to IndexedDB
-        await set(`img_${id}`, file);
-        setSrc(URL.createObjectURL(file));
       } finally {
         setIsUploading(false);
       }
@@ -384,22 +271,9 @@ const EditableImage: React.FC<EditableImageProps> = ({ id, defaultSrc, alt, clas
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${uploadProgress || 30}%` }}
-                transition={uploadProgress === 0 ? { repeat: Infinity, duration: 1.5, ease: "linear" } : {}}
                 className="h-full bg-blue-400"
               />
             </div>
-            {uploadProgress > 0 && (
-              <>
-                <div className="flex justify-between w-full text-[9px] text-white/80 font-mono mb-1">
-                  <span>{uploadProgress}%</span>
-                  <span>{uploadSpeed > 1024 ? `${(uploadSpeed/1024).toFixed(1)}MB/s` : `${Math.round(uploadSpeed)}KB/s`}</span>
-                </div>
-                <div className="flex justify-between w-full text-[8px] text-white/60 font-mono">
-                  <span>{(uploadedBytes/1024).toFixed(0)}KB / {(totalBytes/1024).toFixed(0)}KB</span>
-                  {timeRemaining !== null && <span>{Math.round(timeRemaining)}s</span>}
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -1245,19 +1119,27 @@ const DonationSection: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
             <HeartHandshake className="w-10 h-10" />
           </div>
 
-          <h2 className={cn(
-            "text-4xl font-serif font-bold mb-4 tracking-tight",
-            isDarkMode ? "text-white" : "text-blue-900"
-          )}>
-            <EditableText id="doacao-title" isDev={true} defaultText="Mantenha este Portal de Pé" />
-          </h2>
+          <EditableText 
+            id="doacao-title" 
+            isDev={true} 
+            tagName="h2"
+            className={cn(
+              "text-4xl font-serif font-bold mb-4 tracking-tight",
+              isDarkMode ? "text-white" : "text-blue-900"
+            )}
+            defaultText="Mantenha este Portal de Pé" 
+          />
           
-          <p className={cn(
-            "text-lg mb-10 max-w-2xl mx-auto leading-relaxed",
-            isDarkMode ? "text-slate-400" : "text-emerald-800"
-          )}>
-            <EditableText id="doacao-description" isDev={true} defaultText='"Fora da caridade não há salvação." Este portal é mantido de forma independente para servir à nossa Doutrina. Sua contribuição ajuda a pagar os custos de servidor e IA, garantindo que a luz continue brilhando para todos os jaguares.' />
-          </p>
+          <EditableText 
+            id="doacao-description" 
+            isDev={true} 
+            tagName="p"
+            className={cn(
+              "text-lg mb-10 max-w-2xl mx-auto leading-relaxed",
+              isDarkMode ? "text-slate-400" : "text-emerald-800"
+            )}
+            defaultText='"Fora da caridade não há salvação." Este portal é mantido de forma independente para servir à nossa Doutrina. Sua contribuição ajuda a pagar os custos de servidor e IA, garantindo que a luz continue brilhando para todos os jaguares.' 
+          />
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a 
@@ -1312,6 +1194,7 @@ const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ is
             id="doutrina_desc"
             defaultText="Conheça os fundamentos da Doutrina do Amanhecer e o legado espiritual deixado por nossos mentores."
             isDev={isDev}
+            tagName="p"
             className={cn(
               "max-w-3xl mx-auto text-lg leading-relaxed",
               isDarkMode ? "text-slate-400" : "text-emerald-700"
@@ -1355,12 +1238,16 @@ const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ is
               )}>
                 <EditableText id={`doutrina-card-title-${idx}`} isDev={isDev} defaultText={item.title} />
               </h3>
-              <p className={cn(
-                "text-sm leading-relaxed",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id={`doutrina-card-content-${idx}`} isDev={isDev} defaultText={item.content} />
-              </p>
+              <EditableText 
+                id={`doutrina-card-content-${idx}`} 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "text-sm leading-relaxed",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText={item.content} 
+              />
             </div>
           ))}
         </div>
@@ -1371,18 +1258,34 @@ const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ is
               "p-8 rounded-[3rem] border relative overflow-hidden",
               isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100 shadow-xl"
             )}>
-              <h3 className="text-2xl font-serif font-bold text-violet-500 mb-4">Tia Neiva</h3>
-              <p className={cn(
-                "text-sm leading-relaxed mb-6",
-                isDarkMode ? "text-slate-300" : "text-emerald-800"
-              )}>
-                Neiva Chaves Zelaya, a Clarividente, foi a enviada para materializar a Doutrina do Amanhecer no plano físico. Sua missão foi acolher os desamparados e formar uma legião de médiuns capazes de manipular as forças do universo.
-              </p>
+              <h3 className="text-2xl font-serif font-bold text-violet-500 mb-4">
+                <EditableText id="doutrina-tianeiva-title" isDev={isDev} defaultText="Tia Neiva" />
+              </h3>
+              <EditableText 
+                id="doutrina-tianeiva-desc" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "text-sm leading-relaxed mb-6",
+                  isDarkMode ? "text-slate-300" : "text-emerald-800"
+                )}
+                defaultText="Neiva Chaves Zelaya, a Clarividente, foi a enviada para materializar a Doutrina do Amanhecer no plano físico. Sua missão foi acolher os desamparados e formar uma legião de médiuns capazes de manipular as forças do universo." 
+              />
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-500">
                   <Heart className="w-6 h-6" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-violet-400">A Mãe Mentora</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-violet-400">
+                  <EditableText id="doutrina-tianeiva-label" isDev={isDev} defaultText="A Mãe Mentora" />
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-violet-500/10 text-violet-500 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  <EditableText id="doutrina-tianeiva-tag-1" isDev={isDev} defaultText="Clarividente" />
+                </span>
+                <span className="px-3 py-1 bg-violet-500/10 text-violet-500 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  <EditableText id="doutrina-tianeiva-tag-2" isDev={isDev} defaultText="Fundadora" />
+                </span>
               </div>
             </div>
 
@@ -1390,18 +1293,34 @@ const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ is
               "p-8 rounded-[3rem] border relative overflow-hidden",
               isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100 shadow-xl"
             )}>
-              <h3 className="text-2xl font-serif font-bold text-blue-500 mb-4">Pai Seta Branca</h3>
-              <p className={cn(
-                "text-sm leading-relaxed mb-6",
-                isDarkMode ? "text-slate-300" : "text-emerald-800"
-              )}>
-                O Grande Simiromba de Deus, mentor espiritual da nossa missão. Pai Seta Branca guia os Jaguares na Nova Era, trazendo a sabedoria dos planos superiores para o equilíbrio da Terra.
-              </p>
+              <h3 className="text-2xl font-serif font-bold text-blue-500 mb-4">
+                <EditableText id="doutrina-paisetabranca-title" isDev={isDev} defaultText="Pai Seta Branca" />
+              </h3>
+              <EditableText 
+                id="doutrina-paisetabranca-desc" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "text-sm leading-relaxed mb-6",
+                  isDarkMode ? "text-slate-300" : "text-emerald-800"
+                )}
+                defaultText="O Grande Simiromba de Deus, mentor espiritual da nossa missão. Pai Seta Branca guia os Jaguares na Nova Era, trazendo a sabedoria dos planos superiores para o equilíbrio da Terra." 
+              />
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
                   <Star className="w-6 h-6" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-blue-400">O Mentor Espiritual</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-blue-400">
+                  <EditableText id="doutrina-paisetabranca-label" isDev={isDev} defaultText="O Mentor Espiritual" />
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  <EditableText id="doutrina-paisetabranca-tag-1" isDev={isDev} defaultText="Simiromba" />
+                </span>
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                  <EditableText id="doutrina-paisetabranca-tag-2" isDev={isDev} defaultText="Grande Oriente" />
+                </span>
               </div>
             </div>
           </div>
@@ -1682,7 +1601,8 @@ export default function App() {
     contactEmail: 'jesuscristopaisetabranca@gmail.com',
     youtubeChannel: 'https://www.youtube.com/channel/UCuXuIizz8_5nkLMWU-Vxo5g',
     tipaUrl: 'https://tipa.ai/jesuscristopaisetabranca',
-    pixKey: 'jesuscristopaisetabranca@gmail.com'
+    pixKey: 'jesuscristopaisetabranca@gmail.com',
+    masterKey: 'amanhecer'
   });
 
   React.useEffect(() => {
@@ -1792,11 +1712,11 @@ export default function App() {
     await set('vale_news', updatedNews);
     setIsNewsModalOpen(false);
     setNewNews({ title: '', content: '', category: 'Comunicado' });
-    alert("Comunicado adicionado com sucesso!");
+    console.log("Comunicado adicionado com sucesso!");
   };
 
   const handleDeleteNews = async (id: string) => {
-    if (confirm("Deseja excluir este comunicado?")) {
+    if (true) {
       const updatedNews = news.filter(item => item.id !== id);
       setNews(updatedNews);
       
@@ -1816,7 +1736,7 @@ export default function App() {
   };
 
   const handleAddGalleryItem = async (type: 'image' | 'video') => {
-    const title = prompt(`Digite o título para o novo ${type === 'image' ? 'foto' : 'vídeo'}:`);
+    const title = "Novo Item"; // Removed prompt for iframe compatibility
     if (title) {
       const newItem: GalleryItem = {
         id: `gal-${Date.now()}`,
@@ -1842,7 +1762,7 @@ export default function App() {
   };
 
   const handleDeleteGalleryItem = async (id: string) => {
-    if (confirm('Deseja realmente excluir este item da galeria?')) {
+    if (true) {
       const updatedGallery = galleryItems.filter(item => item.id !== id);
       setGalleryItems(updatedGallery);
       
@@ -1888,14 +1808,14 @@ export default function App() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Simplified access with Master Key
-    if (masterKey.toLowerCase() === 'amanhecer') {
+    if (masterKey.toLowerCase() === siteConfig.masterKey.toLowerCase()) {
       setIsDev(true);
       localStorage.setItem('isDev', 'true');
       setIsLoggedIn(true);
       setIsLoginModalOpen(false);
-      alert("Modo Mestre Ativado!");
+      console.log("Modo Mestre Ativado!");
     } else {
-      alert("Chave incorreta. Apenas o Administrador pode editar o portal.");
+      console.log("Chave incorreta. Apenas o Administrador pode editar o portal.");
     }
   };
 
@@ -1906,11 +1826,11 @@ export default function App() {
     if (!newState) {
       setIsLoggedIn(false);
     }
-    alert(`Modo Desenvolvedor ${newState ? 'Ativado' : 'Desativado'}`);
+    console.log(`Modo Desenvolvedor ${newState ? 'Ativado' : 'Desativado'}`);
   };
 
   const resetAllImages = async () => {
-    if (confirm("Deseja realmente resetar todas as imagens e vídeos para o padrão? Isso não pode ser desfeito.")) {
+    if (true) {
       try {
         // Reset server
         await fetch('/api/reset', { method: 'POST' });
@@ -2043,10 +1963,14 @@ export default function App() {
   };
 
   return (
-    <div className={cn(
-      "min-h-screen font-sans transition-colors duration-500",
-      isDarkMode ? "bg-slate-950 text-slate-100 selection:bg-blue-900" : "bg-pink-50 text-emerald-900 selection:bg-pink-200"
-    )}>
+    <Routes>
+      <Route path="/admin" element={<Admin />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={
+        <div className={cn(
+          "min-h-screen font-sans transition-colors duration-500",
+          isDarkMode ? "bg-slate-950 text-slate-100 selection:bg-blue-900" : "bg-pink-50 text-emerald-900 selection:bg-pink-200"
+        )}>
       {isDev && (
         <div className="fixed top-0 left-0 right-0 z-[200] bg-blue-900 text-white py-2 px-4 flex items-center justify-between shadow-lg border-b border-blue-700 animate-in slide-in-from-top duration-500">
           <div className="flex items-center gap-3">
@@ -2115,7 +2039,7 @@ export default function App() {
           )}>
             <div className="group relative px-4 py-2">
               <button className="hover:text-violet-500 transition-colors flex items-center gap-1.5 py-2 relative group">
-                Doutrina 
+                <EditableText id="nav-doutrina" isDev={isDev} defaultText="Doutrina" /> 
                 <ChevronDown className="w-3 h-3 transition-transform group-hover:rotate-180" />
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
               </button>
@@ -2123,18 +2047,30 @@ export default function App() {
                 "absolute top-full left-0 mt-1 shadow-2xl rounded-2xl p-3 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform group-hover:translate-y-0 translate-y-2 border",
                 isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
               )}>
-                <a href="#doutrina" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Doutrina e Missão</a>
-                <a href="#historia" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Nossa História</a>
-                <a href="#nossos-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Nossos Templos</a>
-                <a href="#falanges" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Falanges do Amanhecer</a>
-                <a href="#povo-cigano" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Povo Cigano</a>
-                <a href="#beneficios" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Benefícios</a>
+                <a href="#doutrina" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-doutrina-missao" isDev={isDev} defaultText="Doutrina e Missão" />
+                </a>
+                <a href="#historia" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-historia" isDev={isDev} defaultText="Nossa História" />
+                </a>
+                <a href="#nossos-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-templos" isDev={isDev} defaultText="Nossos Templos" />
+                </a>
+                <a href="#falanges" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-falanges" isDev={isDev} defaultText="Falanges do Amanhecer" />
+                </a>
+                <a href="#povo-cigano" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-povo-cigano" isDev={isDev} defaultText="Povo Cigano" />
+                </a>
+                <a href="#beneficios" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-beneficios" isDev={isDev} defaultText="Benefícios" />
+                </a>
               </div>
             </div>
 
             <div className="group relative px-4 py-2">
               <button className="hover:text-violet-500 transition-colors flex items-center gap-1.5 py-2 relative group">
-                Jornada 
+                <EditableText id="nav-jornada" isDev={isDev} defaultText="Jornada" /> 
                 <ChevronDown className="w-3 h-3 transition-transform group-hover:rotate-180" />
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
               </button>
@@ -2142,17 +2078,27 @@ export default function App() {
                 "absolute top-full left-0 mt-1 shadow-2xl rounded-2xl p-3 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform group-hover:translate-y-0 translate-y-2 border",
                 isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
               )}>
-                <a href="#desenvolvimento" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Desenvolvimento</a>
-                <a href="#emplacamento" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Emplacamento</a>
-                <a href="#iniciacao" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Iniciação</a>
-                <a href="#elevacao" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Elevação</a>
-                <a href="#pre-centuria" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Pré Centuria</a>
+                <a href="#desenvolvimento" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-desenvolvimento" isDev={isDev} defaultText="Desenvolvimento" />
+                </a>
+                <a href="#emplacamento" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-emplacamento" isDev={isDev} defaultText="Emplacamento" />
+                </a>
+                <a href="#iniciacao" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-iniciacao" isDev={isDev} defaultText="Iniciação" />
+                </a>
+                <a href="#elevacao" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-elevacao" isDev={isDev} defaultText="Elevação" />
+                </a>
+                <a href="#pre-centuria" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-pre-centuria" isDev={isDev} defaultText="Pré Centuria" />
+                </a>
               </div>
             </div>
 
             <div className="group relative px-4 py-2">
               <button className="hover:text-violet-500 transition-colors flex items-center gap-1.5 py-2 relative group">
-                Acervo 
+                <EditableText id="nav-acervo" isDev={isDev} defaultText="Acervo" /> 
                 <ChevronDown className="w-3 h-3 transition-transform group-hover:rotate-180" />
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
               </button>
@@ -2160,34 +2106,48 @@ export default function App() {
                 "absolute top-full left-0 mt-1 shadow-2xl rounded-2xl p-3 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform group-hover:translate-y-0 translate-y-2 border",
                 isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-pink-100"
               )}>
-                <a href="#mantras" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Mantras</a>
-                <a href="#musicas-ciganas" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Músicas Ciganas</a>
-                <a href="#videos-destaque" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Vídeos em Destaque</a>
-                <a href="#galeria" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Galeria de Mídia</a>
-                <a href="#relacao-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Relação de Templos</a>
-                <a href="#calendario" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Calendário de Eventos</a>
-                <a href="#arquivos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">Downloads (Drive)</a>
+                <a href="#mantras" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-mantras" isDev={isDev} defaultText="Mantras" />
+                </a>
+                <a href="#musicas-ciganas" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-musicas-ciganas" isDev={isDev} defaultText="Músicas Ciganas" />
+                </a>
+                <a href="#videos-destaque" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-videos-destaque" isDev={isDev} defaultText="Vídeos em Destaque" />
+                </a>
+                <a href="#galeria" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-galeria" isDev={isDev} defaultText="Galeria de Mídia" />
+                </a>
+                <a href="#relacao-templos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-relacao-templos" isDev={isDev} defaultText="Relação de Templos" />
+                </a>
+                <a href="#calendario" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-calendario" isDev={isDev} defaultText="Calendário de Eventos" />
+                </a>
+                <a href="#arquivos" className="flex items-center gap-2 px-4 py-2.5 hover:bg-violet-500/10 rounded-xl transition-colors hover:text-violet-500">
+                  <EditableText id="nav-arquivos" isDev={isDev} defaultText="Downloads (Drive)" />
+                </a>
               </div>
             </div>
 
             <a href="#noticias" className="px-4 py-2 hover:text-violet-500 transition-colors relative group">
-              Notícias
+              <EditableText id="nav-noticias" isDev={isDev} defaultText="Notícias" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
             <a href="#blog" className="px-4 py-2 hover:text-violet-500 transition-colors relative group">
-              Blog
+              <EditableText id="nav-blog" isDev={isDev} defaultText="Blog" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
             <a href="#assistente-ia" className="px-4 py-2 hover:text-violet-500 transition-colors relative group">
-              Assistente IA
+              <EditableText id="nav-assistente-ia" isDev={isDev} defaultText="Assistente IA" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
             <a href="#perolas" className="px-4 py-2 hover:text-violet-500 transition-colors relative group">
-              Só as Pérolas
+              <EditableText id="nav-perolas" isDev={isDev} defaultText="Só as Pérolas" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
             <a href="#contato" className="px-4 py-2 hover:text-violet-500 transition-colors relative group">
-              Contato
+              <EditableText id="nav-contato" isDev={isDev} defaultText="Contato" />
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-500 transition-all group-hover:w-full"></span>
             </a>
             <a href="https://tipa.ai/jesuscristopaisetabranca" target="_blank" rel="noopener noreferrer" className="px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2 ml-2">
@@ -2406,24 +2366,36 @@ export default function App() {
               )}>
                 <EditableText id="hero-badge" isDev={isDev} defaultText="Missão Jaguar: O Chamado de Pai Seta Branca" />
               </span>
-              <h2 className={cn(
-                "text-2xl md:text-3xl font-serif font-bold mb-4 uppercase tracking-wider",
-                isDarkMode ? "text-violet-500" : "text-emerald-600"
-              )}>
-                <EditableText id="hero-subtitle" isDev={isDev} defaultText="A Ciência Sagrada do Amanhecer" />
-              </h2>
-              <h1 className={cn(
-                "text-4xl md:text-6xl font-serif font-bold leading-[1.1] mb-6",
-                isDarkMode ? "text-white" : "text-blue-900"
-              )}>
-                <EditableText id="hero-title" isDev={isDev} defaultText="O Despertar do Jaguar: Domine a Manipulação de Energias e Cumpra sua Missão na Nova Era." />
-              </h1>
-              <p className={cn(
-                "text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed",
-                isDarkMode ? "text-slate-300" : "text-emerald-700"
-              )}>
-                <EditableText id="hero-desc" isDev={isDev} defaultText="Descubra a nova linha de raciocínio iniciática que revela como equilibrar as forças espirituais e realizar a verdadeira caridade através da ciência deixada por Tia Neiva." />
-              </p>
+              <EditableText 
+                id="hero-subtitle" 
+                isDev={isDev} 
+                tagName="h2"
+                className={cn(
+                  "text-2xl md:text-3xl font-serif font-bold mb-4 uppercase tracking-wider",
+                  isDarkMode ? "text-violet-500" : "text-emerald-600"
+                )}
+                defaultText="A Ciência Sagrada do Amanhecer" 
+              />
+              <EditableText 
+                id="hero-title" 
+                isDev={isDev} 
+                tagName="h1"
+                className={cn(
+                  "text-4xl md:text-6xl font-serif font-bold leading-[1.1] mb-6",
+                  isDarkMode ? "text-white" : "text-blue-900"
+                )}
+                defaultText="O Despertar do Jaguar: Domine a Manipulação de Energias e Cumpra sua Missão na Nova Era." 
+              />
+              <EditableText 
+                id="hero-desc" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed",
+                  isDarkMode ? "text-slate-300" : "text-emerald-700"
+                )}
+                defaultText="Descubra a nova linha de raciocínio iniciática que revela como equilibrar as forças espirituais e realizar a verdadeira caridade através da ciência deixada por Tia Neiva." 
+              />
             </motion.div>
 
             {/* VSL Placeholder */}
@@ -2627,6 +2599,7 @@ export default function App() {
                 id="historia_desc"
                 defaultText="A trajetória de Tia Neiva e a fundação do Vale do Amanhecer é uma jornada de fé, clarividência e amor incondicional que transformou a vida de milhares de pessoas."
                 isDev={isDev}
+                tagName="p"
                 className={cn(
                   "max-w-3xl mx-auto text-lg leading-relaxed",
                   isDarkMode ? "text-slate-400" : "text-emerald-700"
@@ -2651,30 +2624,35 @@ export default function App() {
                 <div className="space-y-12">
                   {[
                     {
+                      id: "tm-1",
                       year: "1959",
                       title: "O Início da Missão",
                       desc: "Tia Neiva inicia sua jornada espiritual e clarividência em Alexânia, Goiás, fundando a União Espiritualista Seta Branca (UESB).",
                       side: "left"
                     },
                     {
+                      id: "tm-2",
                       year: "1964",
                       title: "Taguatinga",
                       desc: "A comunidade se transfere para Taguatinga, onde a doutrina começa a se estruturar e atrair os primeiros médiuns.",
                       side: "right"
                     },
                     {
+                      id: "tm-3",
                       year: "1969",
                       title: "Fundação do Vale",
                       desc: "Ocupação da área atual em Planaltina, DF. Início da construção do Templo Mãe e das primeiras casas.",
                       side: "left"
                     },
                     {
+                      id: "tm-4",
                       year: "1970",
                       title: "Mário Sassi",
                       desc: "Mário Sassi (Trino Tumuchy) une-se à missão, trazendo a sistematização intelectual e escrita da doutrina.",
                       side: "right"
                     },
                     {
+                      id: "tm-5",
                       year: "1985",
                       title: "O Legado",
                       desc: "Passagem de Tia Neiva para o plano espiritual, deixando um legado consolidado e uma hierarquia estruturada.",
@@ -2700,15 +2678,25 @@ export default function App() {
                             isDarkMode ? "bg-slate-800/50 border-slate-700 hover:border-violet-500/50" : "bg-pink-50/50 border-pink-100 hover:border-violet-200"
                           )}
                         >
-                          <span className="text-violet-500 font-bold text-xl mb-2 block">{item.year}</span>
+                          <span className="text-violet-500 font-bold text-xl mb-2 block">
+                            <EditableText id={`tm-year-${item.id}`} isDev={isDev} defaultText={item.year} />
+                          </span>
                           <h4 className={cn(
                             "text-xl font-bold mb-3",
                             isDarkMode ? "text-white" : "text-blue-900"
-                          )}>{item.title}</h4>
-                          <p className={cn(
-                            "text-sm leading-relaxed",
-                            isDarkMode ? "text-slate-400" : "text-emerald-800"
-                          )}>{item.desc}</p>
+                          )}>
+                            <EditableText id={`tm-title-${item.id}`} isDev={isDev} defaultText={item.title} />
+                          </h4>
+                          <EditableText 
+                            id={`tm-desc-${item.id}`} 
+                            isDev={isDev} 
+                            tagName="p"
+                            className={cn(
+                              "text-sm leading-relaxed",
+                              isDarkMode ? "text-slate-400" : "text-emerald-800"
+                            )}
+                            defaultText={item.desc} 
+                          />
                         </motion.div>
                       </div>
                     </div>
@@ -2918,12 +2906,18 @@ export default function App() {
                     "space-y-4 leading-relaxed",
                     isDarkMode ? "text-slate-300" : "text-emerald-800"
                   )}>
-                    <p>
-                      <EditableText id="missao-espiritual-p1" isDev={isDev} defaultText="O Vale do Amanhecer não é apenas um local físico, mas um portal de manipulação de energias. A missão principal é a desobsessão e o encaminhamento de espíritos sofredores, além do despertar da consciência mediúnica de seus membros." />
-                    </p>
-                    <p>
-                      <EditableText id="missao-espiritual-p2" isDev={isDev} defaultText="Através de rituais complexos e precisos, os médiuns (Doutrinadores e Aparás) trabalham em conjunto para equilibrar as forças cármicas e trazer alívio àqueles que buscam auxílio, seja no plano físico ou espiritual." />
-                    </p>
+                    <EditableText 
+                      id="missao-espiritual-p1" 
+                      isDev={isDev} 
+                      tagName="p"
+                      defaultText="O Vale do Amanhecer não é apenas um local físico, mas um portal de manipulação de energias. A missão principal é a desobsessão e o encaminhamento de espíritos sofredores, além do despertar da consciência mediúnica de seus membros." 
+                    />
+                    <EditableText 
+                      id="missao-espiritual-p2" 
+                      isDev={isDev} 
+                      tagName="p"
+                      defaultText="Através de rituais complexos e precisos, os médiuns (Doutrinadores e Aparás) trabalham em conjunto para equilibrar as forças cármicas e trazer alívio àqueles que buscam auxílio, seja no plano físico ou espiritual." 
+                    />
                   </div>
                 </div>
                 <div className="space-y-6">
@@ -2932,12 +2926,20 @@ export default function App() {
                     isDarkMode ? "bg-slate-900 border-violet-500 text-violet-200" : "bg-white border-violet-500 text-emerald-800 shadow-sm"
                   )}>
                     <Quote className="w-8 h-8 text-violet-500/20 mb-4" />
-                    <p className="text-lg">
-                      <EditableText id="quote-tia-neiva-text" isDev={isDev} defaultText='"Minha missão é preparar o homem para a Nova Era, através do amor e do perdão."' />
-                    </p>
-                    <p className="mt-4 font-bold text-sm not-italic">
-                      <EditableText id="quote-tia-neiva-author" isDev={isDev} defaultText="— Tia Neiva" />
-                    </p>
+                    <EditableText 
+                      id="quote-tia-neiva-text" 
+                      isDev={isDev} 
+                      tagName="p"
+                      className="text-lg"
+                      defaultText='"Minha missão é preparar o homem para a Nova Era, através do amor e do perdão."' 
+                    />
+                    <EditableText 
+                      id="quote-tia-neiva-author" 
+                      isDev={isDev} 
+                      tagName="p"
+                      className="mt-4 font-bold text-sm not-italic"
+                      defaultText="— Tia Neiva" 
+                    />
                   </div>
                 </div>
               </div>
@@ -2969,9 +2971,13 @@ export default function App() {
               )}>
                 <EditableText id="beneficios-title" isDev={isDev} defaultText="Transformações Reais no Vale do Amanhecer" />
               </h2>
-              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>
-                <EditableText id="beneficios-subtitle" isDev={isDev} defaultText="Baseado nos ensinamentos iniciáticos de Tia Neiva" />
-              </p>
+              <EditableText 
+                id="beneficios-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={isDarkMode ? "text-slate-400" : "text-emerald-700"}
+                defaultText="Baseado nos ensinamentos iniciáticos de Tia Neiva" 
+              />
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -3022,12 +3028,16 @@ export default function App() {
                   )}>
                     <EditableText id={`benefit-title-${benefit.id}`} isDev={isDev} defaultText={benefit.title} />
                   </h3>
-                  <p className={cn(
-                    "leading-relaxed",
-                    isDarkMode ? "text-slate-400" : "text-emerald-700"
-                  )}>
-                    <EditableText id={`benefit-desc-${benefit.id}`} isDev={isDev} defaultText={benefit.desc} />
-                  </p>
+                  <EditableText 
+                    id={`benefit-desc-${benefit.id}`} 
+                    isDev={isDev} 
+                    tagName="p"
+                    className={cn(
+                      "leading-relaxed",
+                      isDarkMode ? "text-slate-400" : "text-emerald-700"
+                    )}
+                    defaultText={benefit.desc} 
+                  />
                 </motion.div>
               ))}
             </div>
@@ -3053,12 +3063,16 @@ export default function App() {
               )}>
                 <EditableText id="featured-videos-title" isDev={isDev} defaultText="Vídeos em Destaque" />
               </h2>
-              <p className={cn(
-                "max-w-2xl mx-auto",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id="featured-videos-subtitle" isDev={isDev} defaultText="Explore as instruções em vídeo sobre a Doutrina, os processos de Cura e a Missão do Jaguar." />
-              </p>
+              <EditableText 
+                id="featured-videos-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "max-w-2xl mx-auto",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText="Explore as instruções em vídeo sobre a Doutrina, os processos de Cura e a Missão do Jaguar." 
+              />
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -3094,9 +3108,13 @@ export default function App() {
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
                 <EditableText id="falanges-title" isDev={isDev} defaultText="Falanges do Amanhecer" />
               </h2>
-              <p className="text-emerald-700 max-w-2xl mx-auto">
-                <EditableText id="falanges-subtitle" isDev={isDev} defaultText="As diversas frentes de trabalho espiritual que compõem a nossa doutrina, cada uma com sua missão e força específica." />
-              </p>
+              <EditableText 
+                id="falanges-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className="text-emerald-700 max-w-2xl mx-auto"
+                defaultText="As diversas frentes de trabalho espiritual que compõem a nossa doutrina, cada uma com sua missão e força específica." 
+              />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
@@ -3123,9 +3141,13 @@ export default function App() {
                   <h3 className="font-bold text-blue-900 mb-2">
                     <EditableText id={`falange-name-${falange.id}`} isDev={isDev} defaultText={falange.name} />
                   </h3>
-                  <p className="text-sm text-emerald-700">
-                    <EditableText id={`falange-desc-${falange.id}`} isDev={isDev} defaultText={falange.desc} />
-                  </p>
+                  <EditableText 
+                    id={`falange-desc-${falange.id}`} 
+                    isDev={isDev} 
+                    tagName="p"
+                    className="text-sm text-emerald-700"
+                    defaultText={falange.desc} 
+                  />
                 </motion.div>
               ))}
             </div>
@@ -3140,9 +3162,13 @@ export default function App() {
                 <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-6">
                   <EditableText id="povo-cigano-title" isDev={isDev} defaultText="O Povo Cigano no Amanhecer" />
                 </h2>
-                <p className="text-emerald-800 mb-6 leading-relaxed">
-                  <EditableText id="povo-cigano-desc" isDev={isDev} defaultText="A influência cigana no Vale do Amanhecer é uma das mais belas e vibrantes frentes de trabalho. Representando a liberdade, a alegria e a profunda conexão com as forças da natureza, os Ciganos trazem uma energia de cura e desobsessão única." />
-                </p>
+                <EditableText 
+                  id="povo-cigano-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className="text-emerald-800 mb-6 leading-relaxed"
+                  defaultText="A influência cigana no Vale do Amanhecer é uma das mais belas e vibrantes frentes de trabalho. Representando a liberdade, a alegria e a profunda conexão com as forças da natureza, os Ciganos trazem uma energia de cura e desobsessão única." 
+                />
                 <div className="space-y-4">
                   {[
                     "Liberdade espiritual e desapego material.",
@@ -3192,9 +3218,13 @@ export default function App() {
           )}>
             <EditableText id="jornada-title" isDev={isDev} defaultText="A Jornada do Jaguar" />
           </h2>
-          <p className={isDarkMode ? "text-slate-400" : "text-pink-100"}>
-            <EditableText id="jornada-subtitle" isDev={isDev} defaultText="Conheça os degraus da evolução mediúnica em nossa doutrina." />
-          </p>
+          <EditableText 
+            id="jornada-subtitle" 
+            isDev={isDev} 
+            tagName="p"
+            className={isDarkMode ? "text-slate-400" : "text-pink-100"}
+            defaultText="Conheça os degraus da evolução mediúnica em nossa doutrina." 
+          />
         </section>
 
         {/* Desenvolvimento Section */}
@@ -3211,12 +3241,16 @@ export default function App() {
                 )}>
                   <EditableText id="desenvolvimento-title" isDev={isDev} defaultText="Desenvolvimento Mediúnico" />
                 </h2>
-                <p className={cn(
-                  "text-lg mb-6 leading-relaxed",
-                  isDarkMode ? "text-slate-300" : "text-emerald-800"
-                )}>
-                  <EditableText id="desenvolvimento-desc" isDev={isDev} defaultText="O primeiro passo na jornada do Jaguar. Aqui, o médium aprende a equilibrar suas energias e a entender a sua missão espiritual sob a orientação dos Mestres." />
-                </p>
+                <EditableText 
+                  id="desenvolvimento-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className={cn(
+                    "text-lg mb-6 leading-relaxed",
+                    isDarkMode ? "text-slate-300" : "text-emerald-800"
+                  )}
+                  defaultText="O primeiro passo na jornada do Jaguar. Aqui, o médium aprende a equilibrar suas energias e a entender a sua missão espiritual sob a orientação dos Mestres." 
+                />
                 <ul className="space-y-4">
                   {[
                     "Equilíbrio dos plexos e centros nervosos.",
@@ -3262,12 +3296,16 @@ export default function App() {
                 )}>
                   <EditableText id="emplacamento-title" isDev={isDev} defaultText="Emplacamento" />
                 </h2>
-                <p className={cn(
-                  "text-lg mb-6 leading-relaxed",
-                  isDarkMode ? "text-slate-300" : "text-emerald-800"
-                )}>
-                  <EditableText id="emplacamento-desc" isDev={isDev} defaultText="A confirmação da sintonia mediúnica. O momento em que o médium se firma em sua corrente e assume o compromisso de servir à caridade." />
-                </p>
+                <EditableText 
+                  id="emplacamento-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className={cn(
+                    "text-lg mb-6 leading-relaxed",
+                    isDarkMode ? "text-slate-300" : "text-emerald-800"
+                  )}
+                  defaultText="A confirmação da sintonia mediúnica. O momento em que o médium se firma em sua corrente e assume o compromisso de servir à caridade." 
+                />
                 <div className={cn(
                   "p-6 rounded-2xl border italic",
                   isDarkMode ? "bg-slate-900 border-slate-800 text-violet-200" : "bg-white border-pink-200 shadow-sm text-emerald-700"
@@ -3297,25 +3335,37 @@ export default function App() {
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-6">
               <EditableText id="iniciacao-title" isDev={isDev} defaultText="Iniciação" />
             </h2>
-            <p className="text-lg text-emerald-800 max-w-3xl mx-auto mb-12">
-              <EditableText id="iniciacao-desc" isDev={isDev} defaultText="O ingresso oficial nos mistérios da Doutrina. O médium recebe as primeiras chaves para a manipulação consciente das energias." />
-            </p>
+            <EditableText 
+              id="iniciacao-desc" 
+              isDev={isDev} 
+              tagName="p"
+              className="text-lg text-emerald-800 max-w-3xl mx-auto mb-12"
+              defaultText="O ingresso oficial nos mistérios da Doutrina. O médium recebe as primeiras chaves para a manipulação consciente das energias." 
+            />
             <div className="grid md:grid-cols-2 gap-8">
               <div className="p-8 bg-pink-50 rounded-3xl border border-pink-100">
                 <h3 className="text-xl font-bold text-blue-900 mb-4">
                   <EditableText id="iniciacao-item-1-title" isDev={isDev} defaultText="O Despertar" />
                 </h3>
-                <p className="text-emerald-700">
-                  <EditableText id="iniciacao-item-1-desc" isDev={isDev} defaultText="Abertura dos canais para a recepção das forças iniciáticas." />
-                </p>
+                <EditableText 
+                  id="iniciacao-item-1-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className="text-emerald-700"
+                  defaultText="Abertura dos canais para a recepção das forças iniciáticas." 
+                />
               </div>
               <div className="p-8 bg-pink-50 rounded-3xl border border-pink-100">
                 <h3 className="text-xl font-bold text-blue-900 mb-4">
                   <EditableText id="iniciacao-item-2-title" isDev={isDev} defaultText="O Compromisso" />
                 </h3>
-                <p className="text-emerald-700">
-                  <EditableText id="iniciacao-item-2-desc" isDev={isDev} defaultText="Assunção da responsabilidade como porta-voz da espiritualidade." />
-                </p>
+                <EditableText 
+                  id="iniciacao-item-2-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className="text-emerald-700"
+                  defaultText="Assunção da responsabilidade como porta-voz da espiritualidade." 
+                />
               </div>
             </div>
           </div>
@@ -3332,9 +3382,13 @@ export default function App() {
                 <h2 className="text-3xl md:text-5xl font-serif font-bold mb-8">
                   <EditableText id="elevacao-title" isDev={isDev} defaultText="Elevação de Espadas" />
                 </h2>
-                <p className="text-xl text-pink-100 mb-8 max-w-2xl">
-                  <EditableText id="elevacao-desc" isDev={isDev} defaultText="Um dos momentos mais sublimes na vida do Jaguar. A elevação representa o amadurecimento espiritual e a prontidão para trabalhos de maior envergadura." />
-                </p>
+                <EditableText 
+                  id="elevacao-desc" 
+                  isDev={isDev} 
+                  tagName="p"
+                  className="text-xl text-pink-100 mb-8 max-w-2xl"
+                  defaultText="Um dos momentos mais sublimes na vida do Jaguar. A elevação representa o amadurecimento espiritual e a prontidão para trabalhos de maior envergadura." 
+                />
                 <button className="px-8 py-4 bg-violet-500 text-white font-bold rounded-full hover:bg-violet-600 transition-all">
                   <EditableText id="elevacao-btn" isDev={isDev} defaultText="Saiba mais sobre a Elevação" />
                 </button>
@@ -3350,9 +3404,13 @@ export default function App() {
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-blue-900 mb-4">
                 <EditableText id="pre-centuria-title" isDev={isDev} defaultText="Pré Centuria" />
               </h2>
-              <p className="text-emerald-700">
-                <EditableText id="pre-centuria-subtitle" isDev={isDev} defaultText="A preparação final para o Mestrado." />
-              </p>
+              <EditableText 
+                id="pre-centuria-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className="text-emerald-700"
+                defaultText="A preparação final para o Mestrado." 
+              />
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {[
@@ -3364,9 +3422,13 @@ export default function App() {
                   <h3 className="font-bold text-blue-900 mb-2">
                     <EditableText id={`pre-centuria-item-title-${item.id}`} isDev={isDev} defaultText={item.title} />
                   </h3>
-                  <p className="text-sm text-emerald-700">
-                    <EditableText id={`pre-centuria-item-desc-${item.id}`} isDev={isDev} defaultText={item.desc} />
-                  </p>
+                  <EditableText 
+                    id={`pre-centuria-item-desc-${item.id}`} 
+                    isDev={isDev} 
+                    tagName="p"
+                    className="text-sm text-emerald-700"
+                    defaultText={item.desc} 
+                  />
                 </div>
               ))}
             </div>
@@ -3388,9 +3450,13 @@ export default function App() {
               )}>
                 <EditableText id="mantras-title" isDev={isDev} defaultText="Mantras do Vale do Amanhecer" />
               </h2>
-              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>
-                <EditableText id="mantras-subtitle" isDev={isDev} defaultText="A força vibracional das palavras sagradas." />
-              </p>
+              <EditableText 
+                id="mantras-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={isDarkMode ? "text-slate-400" : "text-emerald-700"}
+                defaultText="A força vibracional das palavras sagradas." 
+              />
             </div>
             <div className="grid md:grid-cols-2 gap-8">
               {[
@@ -3410,12 +3476,16 @@ export default function App() {
                     <Sun className="w-5 h-5 text-violet-500" /> 
                     <EditableText id={`mantra-title-${mantra.id}`} isDev={isDev} defaultText={mantra.title} />
                   </h3>
-                  <p className={cn(
-                    "italic leading-relaxed",
-                    isDarkMode ? "text-slate-300" : "text-emerald-700"
-                  )}>
-                    "<EditableText id={`mantra-text-${mantra.id}`} isDev={isDev} defaultText={mantra.text} />"
-                  </p>
+                  <EditableText 
+                    id={`mantra-text-${mantra.id}`} 
+                    isDev={isDev} 
+                    tagName="p"
+                    className={cn(
+                      "italic leading-relaxed",
+                      isDarkMode ? "text-slate-300" : "text-emerald-700"
+                    )}
+                    defaultText={`"${mantra.text}"`} 
+                  />
                 </div>
               ))}
             </div>
@@ -3463,9 +3533,13 @@ export default function App() {
                   className="break-inside-avoid p-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl hover:bg-white/20 transition-all group"
                 >
                   <Quote className="w-8 h-8 text-violet-400 mb-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                  <p className="text-lg font-medium leading-relaxed italic">
-                    "<EditableText id={`perola-text-${idx}`} isDev={isDev} defaultText={perola} />"
-                  </p>
+                  <EditableText 
+                    id={`perola-text-${idx}`} 
+                    isDev={isDev} 
+                    tagName="p"
+                    className="text-lg font-medium leading-relaxed italic"
+                    defaultText={`"${perola}"`} 
+                  />
                   <div className="mt-6 flex items-center gap-2 text-xs font-bold text-violet-300 uppercase tracking-widest">
                     <div className="w-8 h-[1px] bg-violet-300/50" />
                     Tia Neiva
@@ -3489,9 +3563,13 @@ export default function App() {
               )}>
                 <EditableText id="musicas-title" isDev={isDev} defaultText="Músicas Ciganas" />
               </h2>
-              <p className={isDarkMode ? "text-slate-400" : "text-emerald-700"}>
-                <EditableText id="musicas-subtitle" isDev={isDev} defaultText="A alegria e a liberdade da alma cigana na nossa doutrina." />
-              </p>
+              <EditableText 
+                id="musicas-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={isDarkMode ? "text-slate-400" : "text-emerald-700"}
+                defaultText="A alegria e a liberdade da alma cigana na nossa doutrina." 
+              />
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {[
@@ -3540,12 +3618,16 @@ export default function App() {
               )}>
                 <EditableText id="downloads-title" isDev={isDev} defaultText="Downloads e Acervo Digital" />
               </h2>
-              <p className={cn(
-                "max-w-2xl mx-auto",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id="downloads-subtitle" isDev={isDev} defaultText="Acesse e baixe nosso acervo completo de livros, leis, áudios e materiais de estudo." />
-              </p>
+              <EditableText 
+                id="downloads-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "max-w-2xl mx-auto",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText="Acesse e baixe nosso acervo completo de livros, leis, áudios e materiais de estudo." 
+              />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12 items-center mb-24">
@@ -3572,12 +3654,16 @@ export default function App() {
                       )}>
                         <EditableText id={`download-item-title-${item.id}`} isDev={isDev} defaultText={item.title} />
                       </h3>
-                      <p className={cn(
-                        "text-sm leading-relaxed",
-                        isDarkMode ? "text-slate-400" : "text-emerald-700"
-                      )}>
-                        <EditableText id={`download-item-desc-${item.id}`} isDev={isDev} defaultText={item.desc} />
-                      </p>
+                      <EditableText 
+                        id={`download-item-desc-${item.id}`} 
+                        isDev={isDev} 
+                        tagName="p"
+                        className={cn(
+                          "text-sm leading-relaxed",
+                          isDarkMode ? "text-slate-400" : "text-emerald-700"
+                        )}
+                        defaultText={item.desc} 
+                      />
                     </div>
                   </div>
                 ))}
@@ -3594,9 +3680,13 @@ export default function App() {
                   <h3 className="text-3xl font-serif font-bold mb-4">
                     <EditableText id="downloads-drive-title" isDev={isDev} defaultText="Acesso ao Acervo Completo" />
                   </h3>
-                  <p className={isDarkMode ? "text-slate-300 mb-8 leading-relaxed" : "text-blue-100 mb-8 leading-relaxed"}>
-                    <EditableText id="downloads-drive-desc" isDev={isDev} defaultText="Como Mestre, você tem acesso ao nosso Google Drive oficial com todos os materiais da Doutrina do Amanhecer." />
-                  </p>
+                  <EditableText 
+                    id="downloads-drive-desc" 
+                    isDev={isDev} 
+                    tagName="p"
+                    className={isDarkMode ? "text-slate-300 mb-8 leading-relaxed" : "text-blue-100 mb-8 leading-relaxed"}
+                    defaultText="Como Mestre, você tem acesso ao nosso Google Drive oficial com todos os materiais da Doutrina do Amanhecer." 
+                  />
                   <a 
                     href="https://drive.google.com/drive/my-drive"
                     target="_blank"
@@ -4052,12 +4142,16 @@ export default function App() {
               )}>
                 <EditableText id="templos-title" isDev={isDev} defaultText="Nossos Templos" />
               </h2>
-              <p className={cn(
-                "max-w-2xl mx-auto text-lg",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id="templos-subtitle" isDev={isDev} defaultText="Conheça alguns dos pontos de luz espalhados pelo Brasil, onde a doutrina de Tia Neiva floresce e transforma vidas através da caridade e do amor." />
-              </p>
+              <EditableText 
+                id="templos-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "max-w-2xl mx-auto text-lg",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText="Conheça alguns dos pontos de luz espalhados pelo Brasil, onde a doutrina de Tia Neiva floresce e transforma vidas através da caridade e do amor." 
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
@@ -4191,12 +4285,16 @@ export default function App() {
               )}>
                 <EditableText id="relacao-templos-title" isDev={isDev} defaultText="Relação de Templos" />
               </h2>
-              <p className={cn(
-                "max-w-2xl mx-auto text-lg mb-8",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id="relacao-templos-subtitle" isDev={isDev} defaultText="Encontre o Templo do Amanhecer mais próximo de você. Uma rede de luz espalhada por todo o Brasil e exterior." />
-              </p>
+              <EditableText 
+                id="relacao-templos-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "max-w-2xl mx-auto text-lg mb-8",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText="Encontre o Templo do Amanhecer mais próximo de você. Uma rede de luz espalhada por todo o Brasil e exterior." 
+              />
               
               <div className="max-w-md mx-auto relative">
                 <input 
@@ -4318,12 +4416,16 @@ export default function App() {
               )}>
                 <EditableText id="calendario-title" isDev={isDev} defaultText="Calendário de Eventos" />
               </h2>
-              <p className={cn(
-                "max-w-2xl mx-auto text-lg",
-                isDarkMode ? "text-slate-400" : "text-emerald-700"
-              )}>
-                <EditableText id="calendario-subtitle" isDev={isDev} defaultText="Fique por dentro das datas sagradas, celebrações e missões que compõem o ciclo espiritual do Vale do Amanhecer." />
-              </p>
+              <EditableText 
+                id="calendario-subtitle" 
+                isDev={isDev} 
+                tagName="p"
+                className={cn(
+                  "max-w-2xl mx-auto text-lg",
+                  isDarkMode ? "text-slate-400" : "text-emerald-700"
+                )}
+                defaultText="Fique por dentro das datas sagradas, celebrações e missões que compõem o ciclo espiritual do Vale do Amanhecer." 
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -4399,15 +4501,21 @@ export default function App() {
                   </h3>
                   <div className="space-y-6">
                     {[
-                      { day: "Todo 3º Domingo", title: "Palestra Doutrinária", time: "10:00h" },
-                      { day: "Toda 4ª Feira", title: "Missão de Cura Especial", time: "19:30h" },
-                      { day: "Sábados", title: "Desenvolvimento de Médiuns", time: "15:00h" },
-                      { day: "Diariamente", title: "Trabalhos de Retiro", time: "10h às 22h" },
+                      { id: "sch-1", day: "Todo 3º Domingo", title: "Palestra Doutrinária", time: "10:00h" },
+                      { id: "sch-2", day: "Toda 4ª Feira", title: "Missão de Cura Especial", time: "19:30h" },
+                      { id: "sch-3", day: "Sábados", title: "Desenvolvimento de Médiuns", time: "15:00h" },
+                      { id: "sch-4", day: "Diariamente", title: "Trabalhos de Retiro", time: "10h às 22h" },
                     ].map((item, idx) => (
                       <div key={idx} className="border-b border-white/10 last:border-0 pb-4 last:pb-0">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-1">{item.day}</p>
-                        <h4 className="font-bold mb-1">{item.title}</h4>
-                        <p className="text-xs opacity-60">Horário de Brasília: {item.time}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-1">
+                          <EditableText id={`sch-day-${item.id}`} isDev={isDev} defaultText={item.day} />
+                        </p>
+                        <h4 className="font-bold mb-1">
+                          <EditableText id={`sch-title-${item.id}`} isDev={isDev} defaultText={item.title} />
+                        </h4>
+                        <p className="text-xs opacity-60">
+                          Horário de Brasília: <EditableText id={`sch-time-${item.id}`} isDev={isDev} defaultText={item.time} />
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -4418,10 +4526,16 @@ export default function App() {
                   isDarkMode ? "border-slate-800 text-slate-400" : "border-pink-200 text-emerald-700"
                 )}>
                   <Quote className="w-8 h-8 mb-4 opacity-20" />
-                  <p className="text-sm italic leading-relaxed">
-                    "O tempo é o senhor da razão, e na espiritualidade, cada data tem seu mistério e sua força de cura."
+                  <EditableText 
+                    id="sch-quote" 
+                    isDev={isDev} 
+                    tagName="p"
+                    className="text-sm italic leading-relaxed"
+                    defaultText={`"O tempo é o senhor da razão, e na espiritualidade, cada data tem seu mistério e sua força de cura."`} 
+                  />
+                  <p className="text-xs font-bold mt-4 uppercase tracking-widest">
+                    — <EditableText id="sch-quote-author" isDev={isDev} defaultText="Tia Neiva" />
                   </p>
-                  <p className="text-xs font-bold mt-4 uppercase tracking-widest">— Tia Neiva</p>
                 </div>
               </div>
             </div>
@@ -4434,15 +4548,23 @@ export default function App() {
           isDarkMode ? "bg-slate-900 text-white" : "bg-blue-900 text-white"
         )}>
           <div className="max-w-3xl mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6">
-              <EditableText id="cta-title" isDev={isDev} defaultText="Jesus Cristo, o Sol da Terra, te chama." />
-            </h2>
-            <p className={cn(
-              "mb-10 text-lg",
-              isDarkMode ? "text-slate-400" : "text-pink-100"
-            )}>
-              <EditableText id="cta-desc" isDev={isDev} defaultText="Não deixe para amanhã o cumprimento do seu dever espiritual. O Vale do Amanhecer espera por você." />
-            </p>
+            <EditableText 
+              id="cta-title" 
+              isDev={isDev} 
+              tagName="h2"
+              className="text-3xl md:text-4xl font-serif font-bold mb-6"
+              defaultText="Jesus Cristo, o Sol da Terra, te chama." 
+            />
+            <EditableText 
+              id="cta-desc" 
+              isDev={isDev} 
+              tagName="p"
+              className={cn(
+                "mb-10 text-lg",
+                isDarkMode ? "text-slate-400" : "text-pink-100"
+              )}
+              defaultText="Não deixe para amanhã o cumprimento do seu dever espiritual. O Vale do Amanhecer espera por você." 
+            />
             <button className="px-12 py-6 bg-violet-500 hover:bg-violet-600 text-white text-2xl font-bold rounded-full shadow-lg transition-all hover:scale-105 active:scale-95">
               <EditableText id="cta-btn" isDev={isDev} defaultText="Quero ser curado!" />
             </button>
@@ -4514,7 +4636,7 @@ export default function App() {
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-start gap-3">
                   <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                   <p className="text-[10px] text-emerald-800 dark:text-emerald-200 leading-relaxed">
-                    A chave de acesso é <strong>amanhecer</strong>. Use-a para habilitar as ferramentas de edição.
+                    A chave de acesso é <strong>{siteConfig.masterKey}</strong>. Use-a para habilitar as ferramentas de edição.
                   </p>
                 </div>
 
@@ -4635,15 +4757,69 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">
-            <a href="#doutrina" className="hover:text-violet-500 transition-colors">Doutrina</a>
-            <a href="#historia" className="hover:text-violet-500 transition-colors">História</a>
-            <a href="#nossos-templos" className="hover:text-violet-500 transition-colors">Templos</a>
-            <a href="#arquivos" className="hover:text-violet-500 transition-colors">Downloads</a>
-            <a href="#noticias" className="hover:text-violet-500 transition-colors">Notícias</a>
-            <a href="#blog" className="hover:text-violet-500 transition-colors">Blog</a>
-            <a href="#galeria" className="hover:text-violet-500 transition-colors">Galeria</a>
+            <a href="#doutrina" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-doutrina" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Doutrina" 
+              />
+            </a>
+            <a href="#historia" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-historia" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="História" 
+              />
+            </a>
+            <a href="#nossos-templos" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-templos" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Templos" 
+              />
+            </a>
+            <a href="#arquivos" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-downloads" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Downloads" 
+              />
+            </a>
+            <a href="#noticias" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-noticias" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Notícias" 
+              />
+            </a>
+            <a href="#blog" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-blog" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Blog" 
+              />
+            </a>
+            <a href="#galeria" className="hover:text-violet-500 transition-colors">
+              <EditableText 
+                id="footer-nav-galeria" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Galeria" 
+              />
+            </a>
             <a href="https://tipa.ai/jesuscristopaisetabranca" target="_blank" rel="noopener noreferrer" className="text-rose-500 hover:text-rose-600 transition-colors flex items-center gap-1">
-              <Heart className="w-3 h-3 fill-current" /> Doação
+              <Heart className="w-3 h-3 fill-current" /> <EditableText 
+                id="footer-nav-doacao" 
+                isDev={isDev} 
+                tagName="span"
+                defaultText="Doação" 
+              />
             </a>
           </div>
           <p className={cn(
@@ -5172,6 +5348,19 @@ export default function App() {
                           />
                         </div>
                         <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Chave Mestra (Admin)</label>
+                          <input 
+                            type="text" 
+                            value={siteConfig.masterKey}
+                            onChange={(e) => updateSiteConfig({ masterKey: e.target.value })}
+                            className={cn(
+                              "w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all",
+                              isDarkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-200"
+                            )}
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1 italic">Esta chave é usada para acessar o modo de edição do portal.</p>
+                        </div>
+                        <div>
                           <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Canal do YouTube</label>
                           <input 
                             type="url" 
@@ -5189,6 +5378,18 @@ export default function App() {
                             type="url" 
                             value={siteConfig.tipaUrl}
                             onChange={(e) => updateSiteConfig({ tipaUrl: e.target.value })}
+                            className={cn(
+                              "w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all",
+                              isDarkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-200"
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Chave do Mestre (Senha Admin)</label>
+                          <input 
+                            type="text" 
+                            value={siteConfig.masterKey}
+                            onChange={(e) => updateSiteConfig({ masterKey: e.target.value })}
                             className={cn(
                               "w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all",
                               isDarkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-200"
@@ -5237,5 +5438,8 @@ export default function App() {
         </div>
       )}
     </div>
+  } />
+  <Route path="*" element={<Navigate to="/" />} />
+</Routes>
   );
 }

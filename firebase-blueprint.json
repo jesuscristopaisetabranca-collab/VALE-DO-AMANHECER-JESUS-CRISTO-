@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "content": {
+      "title": "Content",
+      "description": "Dynamic content for the portal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "value": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "html", "image", "video", "link"] },
+        "section": { "type": "string" }
+      },
+      "required": ["id", "value", "type"]
+    },
+    "articles": {
+      "title": "Articles",
+      "description": "Blog posts and articles",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "image": { "type": "string" },
+        "author": { "type": "string" }
+      },
+      "required": ["title", "content", "date"]
+    },
+    "gallery": {
+      "title": "Gallery",
+      "description": "Images for the gallery",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "caption": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["url"]
+    }
+  },
+  "firestore": {
+    "/content/{contentId}": {
+      "schema": "content",
+      "description": "General site content"
+    },
+    "/articles/{articleId}": {
+      "schema": "articles",
+      "description": "Blog articles"
+    },
+    "/gallery/{imageId}": {
+      "schema": "gallery",
+      "description": "Gallery images"
+    }
+  }
+}
