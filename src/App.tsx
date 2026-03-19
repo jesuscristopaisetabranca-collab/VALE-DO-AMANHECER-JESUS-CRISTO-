@@ -2421,26 +2421,21 @@ export default function App() {
               />
             </motion.div>
 
-            {/* VSL Placeholder */}
+            {/* Hero Image Placeholder */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
               className="relative max-w-3xl mx-auto aspect-video bg-blue-900 rounded-2xl shadow-2xl overflow-hidden group border-4 border-white"
             >
-              <EditableMedia 
-                id="vsl-media"
+              <EditableImage 
+                id="hero-image"
                 isDev={isDev}
-                defaultSrc="https://www.youtube.com/embed/scWj1pDQVNo"
-                className="w-full h-full"
+                defaultSrc="https://picsum.photos/seed/dawn/1920/1080"
+                alt="Doutrina do Amanhecer"
+                className="w-full h-full object-cover"
               />
               
-              {/* Overlay content - only shown if no video or on hover if we want, but let's keep it simple */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center pointer-events-none group-hover:opacity-0 transition-opacity">
-                <p className="text-xl font-bold mb-2 drop-shadow-md">A Ciência Sagrada do Amanhecer</p>
-                <p className="text-sm opacity-80 max-w-md">Vídeo de Abertura: O Despertar do Jaguar</p>
-              </div>
-
               {/* Share Button */}
               <div className="absolute top-4 right-4 z-20">
                 <button 
