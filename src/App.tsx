@@ -1191,6 +1191,120 @@ const DonationSection: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   );
 };
 
+const HistoriaValeSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ isDarkMode, isDev }) => {
+  const timelineItems = [
+    { id: "h1", year: "1959", title: "O Despertar", desc: "Tia Neiva inicia sua missão espiritual em Alexânia, Goiás, fundando a União Espiritualista Seta Branca (UESB).", img: "https://picsum.photos/seed/hist1/800/600" },
+    { id: "h2", year: "1964", title: "Taguatinga", desc: "A comunidade se transfere para Taguatinga, onde a doutrina começa a se estruturar e atrair os primeiros médiuns.", img: "https://picsum.photos/seed/hist2/800/600" },
+    { id: "h3", year: "1969", title: "Fundação do Vale", desc: "Ocupação da área atual em Planaltina, DF. Início da construção do Templo Mãe e das primeiras casas.", img: "https://picsum.photos/seed/hist3/800/600" },
+    { id: "h4", year: "1970", title: "Mário Sassi", desc: "Mário Sassi (Trino Tumuchy) une-se à missão, trazendo a sistematização intelectual e escrita da doutrina.", img: "https://picsum.photos/seed/hist4/800/600" },
+    { id: "h5", year: "1985", title: "O Legado", desc: "Passagem de Tia Neiva para o plano espiritual, deixando um legado consolidado e uma hierarquia estruturada.", img: "https://picsum.photos/seed/hist5/800/600" },
+  ];
+
+  return (
+    <section id="historia" className={cn(
+      "py-24 scroll-mt-24 transition-colors duration-500",
+      isDarkMode ? "bg-slate-900" : "bg-white"
+    )}>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="text-center mb-16">
+          <EditableText 
+            id="historia-vale-title"
+            defaultText="História do Vale do Amanhecer"
+            tagName="h2"
+            isDev={isDev}
+            className={cn(
+              "text-4xl md:text-5xl font-serif font-bold mb-6",
+              isDarkMode ? "text-white" : "text-blue-900"
+            )}
+          />
+          <div className="w-24 h-1 bg-violet-500 mx-auto mb-8 rounded-full"></div>
+          <EditableText 
+            id="historia-vale-subtitle"
+            defaultText="Uma jornada de fé, clarividência e amor incondicional que transformou a espiritualidade brasileira."
+            isDev={isDev}
+            tagName="p"
+            className={cn(
+              "max-w-3xl mx-auto text-lg leading-relaxed",
+              isDarkMode ? "text-slate-400" : "text-emerald-700"
+            )}
+          />
+        </div>
+
+        <div className="relative">
+          {/* Vertical Line */}
+          <div className={cn(
+            "absolute left-1/2 -translate-x-1/2 h-full w-0.5 hidden md:block",
+            isDarkMode ? "bg-slate-800" : "bg-violet-100"
+          )}></div>
+
+          <div className="space-y-24">
+            {timelineItems.map((item, idx) => (
+              <div key={item.id} className={cn(
+                "relative flex flex-col md:flex-row items-center justify-between gap-8 md:gap-0",
+                idx % 2 === 0 ? "md:flex-row-reverse" : ""
+              )}>
+                {/* Timeline Dot */}
+                <div className={cn(
+                  "absolute left-1/2 -translate-x-1/2 w-6 h-6 rounded-full border-4 z-10 hidden md:block",
+                  isDarkMode ? "bg-slate-900 border-violet-500" : "bg-white border-violet-500"
+                )}></div>
+
+                {/* Content Side */}
+                <div className="w-full md:w-[45%]">
+                  <motion.div 
+                    initial={{ opacity: 0, x: idx % 2 === 0 ? 50 : -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    className={cn(
+                      "p-8 rounded-[2.5rem] border transition-all hover:shadow-2xl",
+                      isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-white border-violet-100 shadow-xl shadow-violet-500/5"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <Calendar className="w-5 h-5 text-violet-500" />
+                      <span className="text-violet-500 font-bold text-xl">
+                        <EditableText id={`hist-year-${item.id}`} isDev={isDev} defaultText={item.year} />
+                      </span>
+                    </div>
+                    <h4 className={cn(
+                      "text-2xl font-bold mb-4",
+                      isDarkMode ? "text-white" : "text-blue-900"
+                    )}>
+                      <EditableText id={`hist-title-${item.id}`} isDev={isDev} defaultText={item.title} />
+                    </h4>
+                    <EditableText 
+                      id={`hist-desc-${item.id}`} 
+                      isDev={isDev} 
+                      tagName="p"
+                      className={cn(
+                        "text-base leading-relaxed mb-6",
+                        isDarkMode ? "text-slate-400" : "text-emerald-800"
+                      )}
+                      defaultText={item.desc} 
+                    />
+                    <div className="rounded-2xl overflow-hidden aspect-video relative group">
+                      <EditableImage 
+                        id={`hist-img-${item.id}`}
+                        isDev={isDev}
+                        defaultSrc={item.img}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Empty Side for Spacing */}
+                <div className="hidden md:block w-[45%]"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const DoutrinaSection: React.FC<{ isDarkMode: boolean; isDev: boolean }> = ({ isDarkMode, isDev }) => {
   return (
     <section id="doutrina" className={cn(
@@ -2595,386 +2709,7 @@ export default function App() {
         
         <DoutrinaSection isDarkMode={isDarkMode} isDev={isDev} />
 
-        {/* História Section */}
-        <section id="historia" className={cn(
-          "py-24 scroll-mt-24 transition-colors duration-500",
-          isDarkMode ? "bg-slate-900" : "bg-white"
-        )}>
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-16">
-              <EditableText 
-                id="historia_title"
-                defaultText="Nossa História"
-                tagName="h2"
-                isDev={isDev}
-                className={cn(
-                  "text-4xl md:text-5xl font-serif font-bold mb-6",
-                  isDarkMode ? "text-white" : "text-blue-900"
-                )}
-              />
-              <div className="w-24 h-1 bg-violet-500 mx-auto mb-8 rounded-full"></div>
-              <EditableText 
-                id="historia_desc"
-                defaultText="A trajetória de Tia Neiva e a fundação do Vale do Amanhecer é uma jornada de fé, clarividência e amor incondicional que transformou a vida de milhares de pessoas."
-                isDev={isDev}
-                tagName="p"
-                className={cn(
-                  "max-w-3xl mx-auto text-lg leading-relaxed",
-                  isDarkMode ? "text-slate-400" : "text-emerald-700"
-                )}
-              />
-            </div>
-
-            {/* Timeline Section */}
-            <div className="mb-24">
-              <h3 className={cn(
-                "text-2xl font-serif font-bold mb-12 text-center",
-                isDarkMode ? "text-violet-300" : "text-blue-800"
-              )}>Marcos Históricos</h3>
-              
-              <div className="relative">
-                {/* Vertical Line */}
-                <div className={cn(
-                  "absolute left-1/2 -translate-x-1/2 h-full w-0.5 hidden md:block",
-                  isDarkMode ? "bg-slate-800" : "bg-pink-100"
-                )}></div>
-
-                <div className="space-y-12">
-                  {[
-                    {
-                      id: "tm-1",
-                      year: "1959",
-                      title: "O Início da Missão",
-                      desc: "Tia Neiva inicia sua jornada espiritual e clarividência em Alexânia, Goiás, fundando a União Espiritualista Seta Branca (UESB).",
-                      side: "left"
-                    },
-                    {
-                      id: "tm-2",
-                      year: "1964",
-                      title: "Taguatinga",
-                      desc: "A comunidade se transfere para Taguatinga, onde a doutrina começa a se estruturar e atrair os primeiros médiuns.",
-                      side: "right"
-                    },
-                    {
-                      id: "tm-3",
-                      year: "1969",
-                      title: "Fundação do Vale",
-                      desc: "Ocupação da área atual em Planaltina, DF. Início da construção do Templo Mãe e das primeiras casas.",
-                      side: "left"
-                    },
-                    {
-                      id: "tm-4",
-                      year: "1970",
-                      title: "Mário Sassi",
-                      desc: "Mário Sassi (Trino Tumuchy) une-se à missão, trazendo a sistematização intelectual e escrita da doutrina.",
-                      side: "right"
-                    },
-                    {
-                      id: "tm-5",
-                      year: "1985",
-                      title: "O Legado",
-                      desc: "Passagem de Tia Neiva para o plano espiritual, deixando um legado consolidado e uma hierarquia estruturada.",
-                      side: "left"
-                    }
-                  ].map((item, idx) => (
-                    <div key={idx} className={cn(
-                      "relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group",
-                      item.side === 'left' ? "md:flex-row-reverse" : "md:flex-row"
-                    )}>
-                      <div className="hidden md:block w-1/2"></div>
-                      <div className={cn(
-                        "absolute left-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-4 z-10 transition-all group-hover:scale-150 hidden md:block",
-                        isDarkMode ? "bg-slate-900 border-violet-500" : "bg-white border-violet-500"
-                      )}></div>
-                      <div className="w-full md:w-[45%]">
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          className={cn(
-                            "p-8 rounded-3xl border transition-all hover:shadow-2xl",
-                            isDarkMode ? "bg-slate-800/50 border-slate-700 hover:border-violet-500/50" : "bg-pink-50/50 border-pink-100 hover:border-violet-200"
-                          )}
-                        >
-                          <span className="text-violet-500 font-bold text-xl mb-2 block">
-                            <EditableText id={`tm-year-${item.id}`} isDev={isDev} defaultText={item.year} />
-                          </span>
-                          <h4 className={cn(
-                            "text-xl font-bold mb-3",
-                            isDarkMode ? "text-white" : "text-blue-900"
-                          )}>
-                            <EditableText id={`tm-title-${item.id}`} isDev={isDev} defaultText={item.title} />
-                          </h4>
-                          <EditableText 
-                            id={`tm-desc-${item.id}`} 
-                            isDev={isDev} 
-                            tagName="p"
-                            className={cn(
-                              "text-sm leading-relaxed",
-                              isDarkMode ? "text-slate-400" : "text-emerald-800"
-                            )}
-                            defaultText={item.desc} 
-                          />
-                        </motion.div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Founders Section */}
-            <div className="grid md:grid-cols-2 gap-16 items-start mb-24">
-              <div className="space-y-8">
-                <div className="relative">
-                  <div className="absolute -top-4 -left-4 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl"></div>
-                  <h3 className={cn(
-                    "text-3xl font-serif font-bold relative",
-                    isDarkMode ? "text-white" : "text-blue-900"
-                  )}>Tia Neiva</h3>
-                  <p className="text-violet-500 font-bold italic">A Clarividente do Amanhecer</p>
-                </div>
-                
-                <div className={cn(
-                  "rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] relative group",
-                  isDarkMode ? "border-4 border-slate-800" : "border-8 border-white"
-                )}>
-                  <EditableImage 
-                    id="tia-neiva-history"
-                    isDev={isDev}
-                    defaultSrc="https://picsum.photos/seed/tianeiva/800/1000" 
-                    alt="Tia Neiva" 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                    <p className="text-white text-sm italic">"O amor é a única força que pode transformar o mundo."</p>
-                  </div>
-                </div>
-
-                <div className={cn(
-                  "space-y-4 leading-relaxed",
-                  isDarkMode ? "text-slate-300" : "text-emerald-800"
-                )}>
-                  <p>
-                    Neiva Chaves Zelaya nasceu em 1925 e, após ficar viúva com quatro filhos, 
-                    tornou-se motorista de caminhão para sustentá-los. Sua vida mudou drasticamente 
-                    em 1959, quando suas faculdades mediúnicas desabrocharam com uma intensidade sem precedentes.
-                  </p>
-                  <p>
-                    Como clarividente, ela conseguia ver o passado, o presente e o futuro, além de 
-                    se comunicar com entidades de alta hierarquia espiritual, como o Pai Seta Branca. 
-                    Sua missão foi fundar uma doutrina que unisse o conhecimento milenar à necessidade 
-                    do homem moderno.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-8 md:mt-24">
-                <div className="relative">
-                  <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
-                  <h3 className={cn(
-                    "text-3xl font-serif font-bold relative",
-                    isDarkMode ? "text-white" : "text-blue-900"
-                  )}>Mário Sassi</h3>
-                  <p className="text-blue-500 font-bold italic">Trino Tumuchy</p>
-                </div>
-
-                <div className={cn(
-                  "rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/5] relative group",
-                  isDarkMode ? "border-4 border-slate-800" : "border-8 border-white"
-                )}>
-                  <EditableImage 
-                    id="mario-sassi-history"
-                    isDev={isDev}
-                    defaultSrc="https://picsum.photos/seed/mariosassi/800/1000" 
-                    alt="Mário Sassi" 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                    <p className="text-white text-sm italic">O mestre que deu voz intelectual à doutrina.</p>
-                  </div>
-                </div>
-
-                <div className={cn(
-                  "space-y-4 leading-relaxed",
-                  isDarkMode ? "text-slate-300" : "text-emerald-800"
-                )}>
-                  <p>
-                    Mário Sassi foi o grande companheiro de missão de Tia Neiva. Intelectual, 
-                    escritor e mestre, ele foi responsável por transcrever e organizar os 
-                    ensinamentos recebidos por Neiva em uma estrutura doutrinária sólida.
-                  </p>
-                  <p>
-                    Como Trino Tumuchy, ele estabeleceu as bases filosóficas e as leis que 
-                    regem o Vale do Amanhecer, permitindo que a doutrina se expandisse de 
-                    forma organizada e fiel aos princípios originais.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Historical Gallery */}
-            <div className="mt-24">
-              <h3 className={cn(
-                "text-2xl font-serif font-bold mb-12 text-center",
-                isDarkMode ? "text-violet-300" : "text-blue-800"
-              )}>Acervo Fotográfico Original</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className={cn(
-                    "group relative aspect-square rounded-2xl overflow-hidden cursor-pointer",
-                    isDarkMode ? "bg-slate-800" : "bg-pink-100"
-                  )}>
-                    <EditableImage 
-                      id={`history-gallery-${i}`}
-                      isDev={isDev}
-                      defaultSrc={`https://picsum.photos/seed/hist-gal-${i}/600/600`}
-                      alt={`Foto Histórica ${i}`}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-violet-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </div>
-                ))}
-              </div>
-              <p className={cn(
-                "mt-6 text-center text-sm italic",
-                isDarkMode ? "text-slate-500" : "text-emerald-600"
-              )}>
-                Clique nas imagens acima (em modo desenvolvedor) para substituir por fotos originais do seu acervo.
-              </p>
-            </div>
-
-            {/* Historical Documents */}
-            <div className="mt-24 mb-12">
-              <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
-                <div className="text-center md:text-left">
-                  <h3 className={cn(
-                    "text-2xl font-serif font-bold",
-                    isDarkMode ? "text-violet-300" : "text-blue-800"
-                  )}>Cartas e Documentos Originais</h3>
-                  <p className={cn(
-                    "text-sm mt-2",
-                    isDarkMode ? "text-slate-500" : "text-emerald-700"
-                  )}>Preservando a voz original da Clarividente.</p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="p-3 bg-violet-500/10 rounded-2xl text-violet-500">
-                    <FileIcon className="w-6 h-6" />
-                  </div>
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                {[1, 2].map((i) => (
-                  <div key={i} className={cn(
-                    "p-6 rounded-[2rem] border flex gap-6 items-center group transition-all hover:shadow-xl",
-                    isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-white border-pink-100"
-                  )}>
-                    <div className="w-24 h-32 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
-                      <EditableImage 
-                        id={`doc-thumb-${i}`}
-                        isDev={isDev}
-                        defaultSrc={`https://picsum.photos/seed/doc-${i}/200/300`}
-                        alt="Documento"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className={cn(
-                        "font-bold mb-2",
-                        isDarkMode ? "text-white" : "text-blue-900"
-                      )}>Documento Histórico {i === 1 ? 'A' : 'B'}</h4>
-                      <p className={cn(
-                        "text-xs leading-relaxed mb-4",
-                        isDarkMode ? "text-slate-400" : "text-emerald-700"
-                      )}>
-                        {i === 1 
-                          ? "Transcrição de carta original recebida por Tia Neiva em 1978 sobre a conduta do mestre." 
-                          : "Instruções originais para o ritual de Estrela Candente."}
-                      </p>
-                      <button className="text-violet-500 text-xs font-bold flex items-center gap-2 hover:underline">
-                        <Download className="w-3 h-3" /> Ver Documento Completo
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Additional Content Area */}
-            <div className={cn(
-              "p-12 rounded-[3rem] relative overflow-hidden",
-              isDarkMode ? "bg-slate-800/30 border border-slate-700" : "bg-violet-50/50 border border-violet-100"
-            )}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-              
-              <div className="grid md:grid-cols-3 gap-12 relative z-10">
-                <div className="md:col-span-2 space-y-6">
-                  <h3 className={cn(
-                    "text-2xl font-serif font-bold",
-                    isDarkMode ? "text-white" : "text-blue-900"
-                  )}>
-                    <EditableText id="missao-espiritual-title" isDev={isDev} defaultText="A Missão Espiritual" />
-                  </h3>
-                  <div className={cn(
-                    "space-y-4 leading-relaxed",
-                    isDarkMode ? "text-slate-300" : "text-emerald-800"
-                  )}>
-                    <EditableText 
-                      id="missao-espiritual-p1" 
-                      isDev={isDev} 
-                      tagName="p"
-                      defaultText="O Vale do Amanhecer não é apenas um local físico, mas um portal de manipulação de energias. A missão principal é a desobsessão e o encaminhamento de espíritos sofredores, além do despertar da consciência mediúnica de seus membros." 
-                    />
-                    <EditableText 
-                      id="missao-espiritual-p2" 
-                      isDev={isDev} 
-                      tagName="p"
-                      defaultText="Através de rituais complexos e precisos, os médiuns (Doutrinadores e Aparás) trabalham em conjunto para equilibrar as forças cármicas e trazer alívio àqueles que buscam auxílio, seja no plano físico ou espiritual." 
-                    />
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <div className={cn(
-                    "p-6 rounded-2xl border-l-4 italic h-full flex flex-col justify-center",
-                    isDarkMode ? "bg-slate-900 border-violet-500 text-violet-200" : "bg-white border-violet-500 text-emerald-800 shadow-sm"
-                  )}>
-                    <Quote className="w-8 h-8 text-violet-500/20 mb-4" />
-                    <EditableText 
-                      id="quote-tia-neiva-text" 
-                      isDev={isDev} 
-                      tagName="p"
-                      className="text-lg"
-                      defaultText='"Minha missão é preparar o homem para a Nova Era, através do amor e do perdão."' 
-                    />
-                    <EditableText 
-                      id="quote-tia-neiva-author" 
-                      isDev={isDev} 
-                      tagName="p"
-                      className="mt-4 font-bold text-sm not-italic"
-                      defaultText="— Tia Neiva" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Call to Action for more content */}
-            {isDev && (
-              <div className="mt-12 p-6 border-2 border-dashed border-violet-300 rounded-2xl text-center">
-                <p className="text-violet-500 font-bold mb-2">Área do Desenvolvedor</p>
-                <p className="text-sm text-slate-500 mb-4">Você pode adicionar mais seções ou materiais originais aqui editando o código.</p>
-                <button className="px-6 py-2 bg-violet-500 text-white rounded-full text-xs font-bold hover:bg-violet-600 transition-all">
-                  Adicionar Novo Bloco de História
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
+        <HistoriaValeSection isDarkMode={isDarkMode} isDev={isDev} />
 
         {/* Benefits Section */}
         <section id="beneficios" className={cn(
